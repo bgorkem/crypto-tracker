@@ -77,9 +77,9 @@ A new user signs up, creates a portfolio, adds initial BUY transactions for seve
 - **FR-001**: System MUST support user registration via email/password and Google OAuth.
 - **FR-002**: System MUST support secure authentication and session handling for all protected routes.
 - **FR-003**: System MUST allow users to create multiple portfolios (name required, description optional).
-- **FR-004**: System MUST allow adding BUY and SELL transactions: symbol, quantity (>0), execution price (>0), timestamp (default now).
+- **FR-004**: System MUST allow adding BUY and SELL transactions: symbol, quantity (>0), execution price (>0), timestamp (default now), and optional notes (free text, ≤1000 characters).
 - **FR-005**: System MUST prevent SELL quantity greater than current holding.
-- **FR-006**: System MUST allow editing transaction quantity, price, and timestamp at any time after creation.
+- **FR-006**: System MUST allow editing transaction quantity, price, timestamp, and notes at any time after creation.
 - **FR-007**: System MUST allow deletion of transactions with immediate recalculation of derived holdings.
 - **FR-008**: System MUST maintain derived holdings per (portfolio, symbol): total quantity, average cost, market value, unrealized P/L.
 - **FR-009**: System MUST fetch price data for ≥30 supported symbols at configured interval or streaming feed.
@@ -117,7 +117,7 @@ A new user signs up, creates a portfolio, adds initial BUY transactions for seve
 ### Key Entities *(include if feature involves data)*
 - **User**: id, email, auth_provider, created_at
 - **Portfolio**: id, user_id (FK), name, description, base_currency (default USD), created_at
-- **Transaction**: id, portfolio_id (FK), symbol, side (BUY|SELL), quantity, price, executed_at, created_at, updated_at
+- **Transaction**: id, portfolio_id (FK), symbol, side (BUY|SELL), quantity, price, executed_at, notes (optional), created_at, updated_at
 - **Holding (derived)**: portfolio_id, symbol, total_quantity, average_cost, market_value, unrealized_pl (computed)
 - **PriceEvent**: symbol, price, change_24h_abs, change_24h_pct, received_at
 - **PortfolioValueSnapshot**: portfolio_id, total_value, captured_at (daily or event-triggered)
