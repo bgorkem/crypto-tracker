@@ -148,9 +148,14 @@ export function internalErrorResponse(
 
 /**
  * Handle Zod validation errors and convert to API error response
+ * Returns field-specific error codes for common validation failures
  */
 export function handleValidationError(error: ZodError): NextResponse {
   const details: Record<string, string[]> = {};
+  
+  // Track which fields failed for specific error codes
+  let hasEmailError = false;
+  let hasPasswordError = false;
 
   for (const issue of error.errors) {
     const path = issue.path.join('.');
@@ -158,8 +163,26 @@ export function handleValidationError(error: ZodError): NextResponse {
       details[path] = [];
     }
     details[path].push(issue.message);
+    
+    // Track field failures
+    if (path === 'email') hasEmailError = true;
+    if (path === 'password') hasPasswordError = true;
   }
 
+  // Return field-specific error codes based on which field failed
+  if (hasEmailError && !hasPasswordError) {
+    return badRequestResponse('INVALID_EMAIL', 'Invalid email format', {
+      fields: details,
+    });
+  }
+  
+  if (hasPasswordError && !hasEmailError) {
+    return badRequestResponse('WEAK_PASSWORD', 'Password does not meet requirements', {
+      fields: details,
+    });
+  }
+
+  // Multiple fields failed or other validation error
   return badRequestResponse('VALIDATION_ERROR', 'Invalid request data', {
     fields: details,
   });

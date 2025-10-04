@@ -28,8 +28,10 @@ describe('POST /api/auth/register', () => {
   const BASE_URL = 'http://localhost:3000';
 
   it('returns 201 with user and session on valid request', async () => {
+    // Generate unique email to avoid conflicts with existing test data
+    const uniqueEmail = `newuser-${Date.now()}@example.com`;
     const requestData = {
-      email: 'newuser@example.com',
+      email: uniqueEmail,
       password: 'SecurePass123!',
     };
 
@@ -48,7 +50,7 @@ describe('POST /api/auth/register', () => {
     expect(validationResult.success).toBe(true);
     
     if (validationResult.success) {
-      expect(validationResult.data.data.user.email).toBe(requestData.email);
+      expect(validationResult.data.data.user.email).toBe(uniqueEmail);
       expect(validationResult.data.data.session.access_token).toBeTruthy();
     }
   });
@@ -100,8 +102,10 @@ describe('POST /api/auth/register', () => {
   });
 
   it('returns 409 EMAIL_EXISTS on duplicate email', async () => {
+    // Generate unique email for this test
+    const uniqueEmail = `existing-${Date.now()}@example.com`;
     const requestData = {
-      email: 'existing@example.com',
+      email: uniqueEmail,
       password: 'SecurePass123!',
     };
 

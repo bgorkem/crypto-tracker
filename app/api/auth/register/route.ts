@@ -8,9 +8,9 @@
  */
 
 import { NextRequest } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createAdminClient, supabase as anonClient } from '@/lib/supabase'
 import { RegisterSchema } from '@/lib/validation'
-import { successResponse, badRequestResponse, internalErrorResponse, handleValidationError } from '@/lib/api-response'
+import { successResponse, conflictResponse, badRequestResponse, internalErrorResponse, handleValidationError } from '@/lib/api-response'
 import { sanitizeInput } from '@/lib/sanitize'
 
 export async function POST(request: NextRequest) {
@@ -28,21 +28,27 @@ export async function POST(request: NextRequest) {
     // Sanitize display name to prevent XSS
     const sanitizedDisplayName = displayName ? sanitizeInput(displayName) : null
 
+    // Use admin client for registration (bypasses email confirmation)
+    const adminClient = createAdminClient()
+
     // Register user with Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
       email,
       password,
-      options: {
-        data: {
-          display_name: sanitizedDisplayName
-        }
+      email_confirm: true, // Auto-confirm email for development
+      user_metadata: {
+        display_name: sanitizedDisplayName
       }
     })
 
     if (authError) {
-      // Check if user already exists
-      if (authError.message.includes('already registered')) {
-        return badRequestResponse('USER_EXISTS', 'User with this email already exists')
+      // Check if user already exists (duplicate email)
+      const errorMsg = authError.message.toLowerCase();
+      if (errorMsg.includes('already registered') || 
+          errorMsg.includes('already been registered') ||
+          errorMsg.includes('duplicate') ||
+          errorMsg.includes('already exists')) {
+        return conflictResponse('EMAIL_EXISTS', 'User with this email already exists')
       }
       return badRequestResponse('REGISTRATION_FAILED', authError.message)
     }
@@ -52,7 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create user profile in our database
-    const { error: profileError } = await supabase
+    const { error: profileError } = await adminClient
       .from('user_profiles')
       .insert({
         id: authData.user.id,
@@ -68,13 +74,41 @@ export async function POST(request: NextRequest) {
       return internalErrorResponse('Failed to create user profile')
     }
 
-    // Return user data (excluding sensitive info)
+    // Create a session for the user (sign them in automatically)
+    const { data: sessionData, error: sessionError } = await anonClient.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    if (sessionError) {
+      console.error('Failed to create session:', sessionError)
+      // User is created but not signed in - they can still login manually
+      return successResponse(
+        {
+          user: {
+            id: authData.user.id,
+            email: authData.user.email!,
+            created_at: authData.user.created_at
+          },
+          session: null
+        },
+        201
+      )
+    }
+
+    // Return user and session data
     return successResponse(
       {
-        id: authData.user.id,
-        email: authData.user.email,
-        displayName: sanitizedDisplayName,
-        createdAt: authData.user.created_at
+        user: {
+          id: authData.user.id,
+          email: authData.user.email!,
+          created_at: authData.user.created_at
+        },
+        session: {
+          access_token: sessionData.session?.access_token || '',
+          refresh_token: sessionData.session?.refresh_token || '',
+          expires_at: sessionData.session?.expires_at || 0
+        }
       },
       201
     )
