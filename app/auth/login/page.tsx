@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { createClient } from '@/lib/supabase-browser';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,6 +13,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
+  const supabase = createClient();
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
@@ -44,31 +46,24 @@ export default function LoginPage() {
     setErrors({});
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+      // Use Supabase client for authentication
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (response.status === 401) {
+      if (error) {
+        if (error.message.includes('Invalid') || error.message.includes('credentials')) {
           setErrors({ general: 'Invalid email or password' });
-        } else if (response.status === 403) {
+        } else if (error.message.includes('Email not confirmed')) {
           setErrors({ general: 'Please verify your email before logging in' });
-        } else if (response.status === 400) {
-          if (data.code === 'INVALID_EMAIL') {
-            setErrors({ email: 'Invalid email format' });
-          } else {
-            setErrors({ general: data.message || 'Invalid input' });
-          }
         } else {
-          setErrors({ general: data.message || 'Login failed' });
+          setErrors({ general: error.message || 'Login failed' });
         }
         return;
       }
 
+      // Session is automatically stored by Supabase client
       // Login successful, redirect to dashboard
       router.push('/dashboard');
     } catch (error) {

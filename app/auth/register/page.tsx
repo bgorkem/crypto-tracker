@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { createClient } from '@/lib/supabase-browser';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function RegisterPage() {
   const [errors, setErrors] = useState<{ email?: string; password?: string; confirmPassword?: string; general?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);
+  const supabase = createClient();
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
@@ -42,19 +44,17 @@ export default function RegisterPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleError = (response: Response, data: { code?: string; message?: string }) => {
-    if (response.status === 409) {
+  const handleError = (error: { message?: string; status?: number }) => {
+    const message = error.message || '';
+    
+    if (message.includes('already registered') || message.includes('already exists')) {
       setErrors({ email: 'Email already exists' });
-    } else if (response.status === 400) {
-      if (data.code === 'INVALID_EMAIL') {
-        setErrors({ email: 'Invalid email format' });
-      } else if (data.code === 'WEAK_PASSWORD') {
-        setErrors({ password: 'Password must be at least 8 characters' });
-      } else {
-        setErrors({ general: data.message || 'Invalid input' });
-      }
+    } else if (message.includes('Invalid') && message.includes('email')) {
+      setErrors({ email: 'Invalid email format' });
+    } else if (message.includes('Password') && message.includes('weak')) {
+      setErrors({ password: 'Password must be at least 8 characters' });
     } else {
-      setErrors({ general: data.message || 'Registration failed' });
+      setErrors({ general: message || 'Registration failed' });
     }
   };
 
@@ -69,23 +69,29 @@ export default function RegisterPage() {
     setErrors({});
 
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+      // Use Supabase client for registration
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        handleError(response, data);
+      if (error) {
+        handleError({ message: error.message });
         return;
       }
 
-      // Check if TEST_MODE is enabled (auto-confirm) or needs email verification
-      if (process.env.NEXT_PUBLIC_TEST_MODE === 'true' || data.data?.session) {
+      // Check if user was created and has a session (auto-confirmed)
+      if (data.session) {
+        // Auto-login successful (TEST_MODE or email confirmation disabled)
         router.push('/dashboard');
+      } else if (data.user && data.user.identities && data.user.identities.length === 0) {
+        // User already exists
+        setErrors({ email: 'Email already exists' });
       } else {
+        // Email verification required
         setVerificationSent(true);
       }
     } catch (error) {

@@ -3,31 +3,29 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { createClient } from "@/lib/supabase-browser";
 
 export default function DashboardPage() {
-  const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const supabase = createClient();
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      // Get token from cookie or local storage if needed
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok || response.status === 204) {
-        router.push('/auth/login');
+      // Sign out using Supabase client
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('Logout error:', error);
       }
+      
+      // Redirect to login page after signOut
+      window.location.href = '/auth/login';
     } catch (error) {
       console.error('Logout error:', error);
-    } finally {
-      setIsLoggingOut(false);
+      // Still redirect even if there's an error
+      window.location.href = '/auth/login';
     }
   };
 
