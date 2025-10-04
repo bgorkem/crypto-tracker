@@ -1,14 +1,12 @@
-import DOMPurify from 'isomorphic-dompurify';
-
 /**
  * Input sanitization utilities to prevent XSS attacks
  * 
- * Uses DOMPurify for server-side HTML sanitization.
+ * Simple server-side sanitization without DOMPurify dependency.
  * All free-text user inputs must be sanitized before storage.
  */
 
 /**
- * Sanitize HTML content to prevent XSS
+ * Sanitize HTML content to prevent XSS (server-side)
  * @param dirty - Untrusted input string
  * @returns Sanitized string safe for storage and display
  */
@@ -17,11 +15,12 @@ export function sanitizeHtml(dirty: string): string {
     return '';
   }
 
-  return DOMPurify.sanitize(dirty, {
-    ALLOWED_TAGS: [], // Strip all HTML tags
-    ALLOWED_ATTR: [], // Strip all attributes
-    KEEP_CONTENT: true, // Keep text content
-  });
+  // Simple HTML tag stripping for server-side use
+  return dirty
+    .replace(/<[^>]*>/g, '') // Remove all HTML tags
+    .replace(/&lt;/g, '') // Remove encoded tags
+    .replace(/&gt;/g, '')
+    .trim();
 }
 
 /**
