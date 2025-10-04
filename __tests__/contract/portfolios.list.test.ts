@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { z } from 'zod';
 
 const PortfolioSchema = z.object({
@@ -6,8 +6,8 @@ const PortfolioSchema = z.object({
   name: z.string(),
   description: z.string().nullable(),
   base_currency: z.string(),
-  total_value: z.number(),
-  unrealized_pl: z.number(),
+  total_value: z.number().nullable(),
+  unrealized_pl: z.number().nullable(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
 });
@@ -23,7 +23,22 @@ const PortfoliosListResponseSchema = z.object({
 
 describe('GET /api/portfolios', () => {
   const BASE_URL = 'http://localhost:3000';
-  const authToken = 'mock-token'; // Will be replaced with real auth in integration tests
+  let authToken: string;
+
+  beforeAll(async () => {
+    // Create and login a test user
+    const testEmail = `portfoliouser-${Date.now()}@testuser.com`;
+    const password = 'TestPassword123!';
+
+    const registerResponse = await fetch(`${BASE_URL}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: testEmail, password }),
+    });
+
+    const registerData = await registerResponse.json();
+    authToken = registerData.data.session.access_token;
+  });
 
   it('returns 401 UNAUTHORIZED without auth token', async () => {
     const response = await fetch(`${BASE_URL}/api/portfolios`);
@@ -32,11 +47,9 @@ describe('GET /api/portfolios', () => {
   });
 
   it('returns 200 with empty portfolios array for new user', async () => {
-    // This test assumes we have a valid auth token
-    // For now, it will fail because no endpoint exists
     const response = await fetch(`${BASE_URL}/api/portfolios`, {
       headers: {
-        'Authorization': `Bearer ${authToken || 'mock-token'}`,
+        'Authorization': `Bearer ${authToken}`,
       },
     });
 
@@ -55,7 +68,7 @@ describe('GET /api/portfolios', () => {
   it('supports pagination with limit and offset query params', async () => {
     const response = await fetch(`${BASE_URL}/api/portfolios?limit=10&offset=0`, {
       headers: {
-        'Authorization': `Bearer ${authToken || 'mock-token'}`,
+        'Authorization': `Bearer ${authToken}`,
       },
     });
 
