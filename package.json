@@ -12,9 +12,9 @@
     "test:coverage": "vitest --coverage",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "db:types": "supabase gen types typescript --local > src/types/database.types.ts",
+    "db:types": "supabase gen types typescript --project-id hypcnmhuemqtlsxmfzbc --schema public > src/types/database.generated.types.ts",
     "db:reset": "supabase db reset",
-    "db:migrate": "supabase migration up",
+    "db:migrate": "supabase db push",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop"
   },
