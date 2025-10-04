@@ -8,11 +8,15 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest",
-    "test:unit": "vitest run --coverage",
-    "test:watch": "vitest watch",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
     "test:e2e": "playwright test",
-    "test:coverage": "vitest run --coverage",
-    "type-check": "tsc --noEmit"
+    "test:e2e:ui": "playwright test --ui",
+    "db:types": "supabase gen types typescript --local > src/types/database.types.ts",
+    "db:reset": "supabase db reset",
+    "db:migrate": "supabase migration up",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop"
   },
   "dependencies": {
     "@supabase/auth-helpers-nextjs": "^0.8.7",
