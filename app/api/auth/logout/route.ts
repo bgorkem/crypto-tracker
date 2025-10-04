@@ -7,7 +7,7 @@
 
 import { NextRequest } from 'next/server'
 import { validateAuth } from '@/middleware/auth'
-import { successResponse, unauthorizedResponse, badRequestResponse, internalErrorResponse } from '@/lib/api-response'
+import { noContentResponse, unauthorizedResponse, badRequestResponse, internalErrorResponse } from '@/lib/api-response'
 import { createAuthenticatedClient } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       return badRequestResponse('LOGOUT_FAILED', error.message)
     }
 
-    return successResponse(null)
+    return noContentResponse()
 
   } catch (error) {
     console.error('Logout error:', error)

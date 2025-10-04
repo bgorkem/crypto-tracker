@@ -23,8 +23,9 @@ describe('POST /api/auth/google', () => {
     expect(validationResult.success).toBe(true);
     
     if (validationResult.success) {
-      expect(validationResult.data.data.url).toContain('accounts.google.com');
-      expect(validationResult.data.data.url).toContain('oauth');
+      // Supabase returns its own OAuth proxy URL, not direct Google URL
+      expect(validationResult.data.data.url).toContain('supabase');
+      expect(validationResult.data.data.url).toContain('provider=google');
     }
   });
 
@@ -39,8 +40,10 @@ describe('POST /api/auth/google', () => {
       const validationResult = GoogleOAuthResponseSchema.safeParse(data);
       
       if (validationResult.success) {
-        const url = new URL(validationResult.data.data.url);
-        expect(url.searchParams.has('redirect_uri')).toBe(true);
+        const url = validationResult.data.data.url;
+        // Supabase URL includes redirect_to parameter (not redirect_uri)
+        expect(url).toContain('redirect_to');
+        expect(url).toContain(encodeURIComponent('/auth/callback'));
       }
     }
   });

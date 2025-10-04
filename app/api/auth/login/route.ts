@@ -33,29 +33,17 @@ export async function POST(request: NextRequest) {
       return unauthorizedResponse('INVALID_CREDENTIALS', 'Invalid email or password')
     }
 
-    // Fetch user profile
-    const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', authData.user.id)
-      .single()
-
-    if (profileError) {
-      console.error('Failed to fetch user profile:', profileError)
-    }
-
     // Return session and user data
     return successResponse({
       user: {
         id: authData.user.id,
-        email: authData.user.email,
-        displayName: profile?.display_name || null,
-        avatarUrl: profile?.avatar_url || null
+        email: authData.user.email!,
+        created_at: authData.user.created_at
       },
       session: {
-        accessToken: authData.session?.access_token,
-        refreshToken: authData.session?.refresh_token,
-        expiresAt: authData.session?.expires_at
+        access_token: authData.session?.access_token || '',
+        refresh_token: authData.session?.refresh_token || '',
+        expires_at: authData.session?.expires_at || 0
       }
     })
 

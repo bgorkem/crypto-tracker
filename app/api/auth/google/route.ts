@@ -81,10 +81,11 @@ async function handleOAuthCallback(code: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    const body = await request.json().catch(() => ({}))
     const { action, code } = body
 
-    if (action === 'initiate') {
+    // Default to initiate if no action specified
+    if (!action || action === 'initiate') {
       return await initiateOAuthFlow()
     } else if (action === 'callback') {
       if (!code) {

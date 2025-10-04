@@ -26,11 +26,27 @@ const ErrorResponseSchema = z.object({
 
 describe('POST /api/auth/login', () => {
   const BASE_URL = 'http://localhost:3000';
+  let testEmail: string;
+  const testPassword = 'CorrectPassword123!';
 
   it('returns 200 with user and session on valid credentials', async () => {
+    // Create a unique test user for this test
+    testEmail = `loginuser-${Date.now()}@example.com`;
+    
+    // First register the user
+    await fetch(`${BASE_URL}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: testEmail,
+        password: testPassword,
+      }),
+    });
+
+    // Then login
     const requestData = {
-      email: 'user@example.com',
-      password: 'CorrectPassword123!',
+      email: testEmail,
+      password: testPassword,
     };
 
     const response = await fetch(`${BASE_URL}/api/auth/login`, {
@@ -46,7 +62,7 @@ describe('POST /api/auth/login', () => {
     expect(validationResult.success).toBe(true);
     
     if (validationResult.success) {
-      expect(validationResult.data.data.user.email).toBe(requestData.email);
+      expect(validationResult.data.data.user.email).toBe(testEmail);
       expect(validationResult.data.data.session.access_token).toBeTruthy();
     }
   });
