@@ -1,28 +1,14 @@
 import { describe, it, expect } from 'vitest';
-
-interface Transaction {
-  symbol: string;
-  type: 'BUY' | 'SELL';
-  quantity: number;
-  price_per_unit: number;
-  transaction_date: string;
-}
-
-/**
- * Calculate the proportional cost basis for a SELL transaction using FIFO
- * @param symbol - The cryptocurrency symbol
- * @param sellQuantity - The quantity being sold
- * @param transactions - All transactions for the symbol, in chronological order
- * @returns The cost basis for the sold quantity
- */
-function calculateCostBasis(_symbol: string, _sellQuantity: number, _transactions: Transaction[]): number {
-  throw new Error('NOT_IMPLEMENTED');
-}
+import {
+  calculateCostBasis,
+  type Transaction,
+} from '../../../src/lib/calculations';
 
 describe('calculateCostBasis', () => {
   it('calculates cost basis for full position SELL using FIFO', () => {
     const transactions: Transaction[] = [
       {
+        id: '1',
         symbol: 'BTC',
         type: 'BUY',
         quantity: 1,
@@ -30,6 +16,7 @@ describe('calculateCostBasis', () => {
         transaction_date: '2024-01-01T00:00:00Z',
       },
       {
+        id: '2',
         symbol: 'BTC',
         type: 'BUY',
         quantity: 1,
@@ -47,6 +34,7 @@ describe('calculateCostBasis', () => {
   it('calculates cost basis for partial position SELL using FIFO', () => {
     const transactions: Transaction[] = [
       {
+        id: '1',
         symbol: 'ETH',
         type: 'BUY',
         quantity: 10,
@@ -54,6 +42,7 @@ describe('calculateCostBasis', () => {
         transaction_date: '2024-01-01T00:00:00Z',
       },
       {
+        id: '2',
         symbol: 'ETH',
         type: 'BUY',
         quantity: 5,
@@ -71,6 +60,7 @@ describe('calculateCostBasis', () => {
   it('calculates cost basis from single purchase', () => {
     const transactions: Transaction[] = [
       {
+        id: '1',
         symbol: 'SOL',
         type: 'BUY',
         quantity: 100,
@@ -88,6 +78,7 @@ describe('calculateCostBasis', () => {
   it('handles SELL transactions in chronological order', () => {
     const transactions: Transaction[] = [
       {
+        id: '1',
         symbol: 'BTC',
         type: 'BUY',
         quantity: 3,
@@ -95,6 +86,7 @@ describe('calculateCostBasis', () => {
         transaction_date: '2024-01-01T00:00:00Z',
       },
       {
+        id: '2',
         symbol: 'BTC',
         type: 'SELL',
         quantity: 1,
@@ -102,6 +94,7 @@ describe('calculateCostBasis', () => {
         transaction_date: '2024-01-02T00:00:00Z',
       },
       {
+        id: '3',
         symbol: 'BTC',
         type: 'BUY',
         quantity: 2,

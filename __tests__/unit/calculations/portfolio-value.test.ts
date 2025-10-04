@@ -1,48 +1,39 @@
 import { describe, it, expect } from 'vitest';
-
-interface Holding {
-  symbol: string;
-  total_quantity: number;
-  average_cost: number;
-}
-
-interface Price {
-  symbol: string;
-  price_usd: number;
-}
-
-interface PortfolioValue {
-  total_value: number;
-  total_cost: number;
-  total_pl: number;
-  total_pl_pct: number;
-  holdings_count: number;
-  last_updated: string;
-}
-
-/**
- * Calculate total portfolio value from holdings and current prices
- * @param holdings - Current holdings with quantity and average cost
- * @param currentPrices - Current market prices
- * @returns Aggregated portfolio value metrics
- */
-function calculatePortfolioValue(_holdings: Holding[], _currentPrices: Price[]): PortfolioValue {
-  throw new Error('NOT_IMPLEMENTED');
-}
+import {
+  calculatePortfolioValue,
+  calculateHoldings,
+  type Transaction,
+  type Price,
+} from '../../../src/lib/calculations';
 
 describe('calculatePortfolioValue', () => {
   it('calculates total portfolio value from multiple holdings', () => {
-    const holdings: Holding[] = [
-      { symbol: 'BTC', total_quantity: 1, average_cost: 40000 },
-      { symbol: 'ETH', total_quantity: 10, average_cost: 2000 },
+    const transactions: Transaction[] = [
+      {
+        id: '1',
+        symbol: 'BTC',
+        type: 'BUY',
+        quantity: 1,
+        price_per_unit: 40000,
+        transaction_date: '2024-01-01T00:00:00Z',
+      },
+      {
+        id: '2',
+        symbol: 'ETH',
+        type: 'BUY',
+        quantity: 10,
+        price_per_unit: 2000,
+        transaction_date: '2024-01-01T00:00:00Z',
+      },
     ];
 
-    const currentPrices: Price[] = [
-      { symbol: 'BTC', price_usd: 50000 },
-      { symbol: 'ETH', price_usd: 2500 },
-    ];
+    const currentPrices: Record<string, Price> = {
+      BTC: { symbol: 'BTC', price_usd: 50000, change_24h_pct: 5 },
+      ETH: { symbol: 'ETH', price_usd: 2500, change_24h_pct: 3 },
+    };
 
-    const result = calculatePortfolioValue(holdings, currentPrices);
+    const holdings = calculateHoldings(transactions, currentPrices);
+    const result = calculatePortfolioValue(holdings, Object.values(currentPrices));
 
     expect(result.total_value).toBe(75000); // (1 * 50000) + (10 * 2500)
     expect(result.total_cost).toBe(60000); // (1 * 40000) + (10 * 2000)
@@ -52,15 +43,23 @@ describe('calculatePortfolioValue', () => {
   });
 
   it('handles single holding portfolio', () => {
-    const holdings: Holding[] = [
-      { symbol: 'BTC', total_quantity: 0.5, average_cost: 45000 },
+    const transactions: Transaction[] = [
+      {
+        id: '1',
+        symbol: 'BTC',
+        type: 'BUY',
+        quantity: 0.5,
+        price_per_unit: 45000,
+        transaction_date: '2024-01-01T00:00:00Z',
+      },
     ];
 
-    const currentPrices: Price[] = [
-      { symbol: 'BTC', price_usd: 50000 },
-    ];
+    const currentPrices: Record<string, Price> = {
+      BTC: { symbol: 'BTC', price_usd: 50000, change_24h_pct: 5 },
+    };
 
-    const result = calculatePortfolioValue(holdings, currentPrices);
+    const holdings = calculateHoldings(transactions, currentPrices);
+    const result = calculatePortfolioValue(holdings, [currentPrices.BTC]);
 
     expect(result.total_value).toBe(25000); // 0.5 * 50000
     expect(result.total_cost).toBe(22500); // 0.5 * 45000
@@ -80,16 +79,24 @@ describe('calculatePortfolioValue', () => {
   });
 
   it('includes timestamp in result', () => {
-    const holdings: Holding[] = [
-      { symbol: 'BTC', total_quantity: 1, average_cost: 40000 },
+    const transactions: Transaction[] = [
+      {
+        id: '1',
+        symbol: 'BTC',
+        type: 'BUY',
+        quantity: 1,
+        price_per_unit: 40000,
+        transaction_date: '2024-01-01T00:00:00Z',
+      },
     ];
 
-    const currentPrices: Price[] = [
-      { symbol: 'BTC', price_usd: 50000 },
-    ];
+    const currentPrices: Record<string, Price> = {
+      BTC: { symbol: 'BTC', price_usd: 50000, change_24h_pct: 5 },
+    };
 
     const beforeTime = new Date().toISOString();
-    const result = calculatePortfolioValue(holdings, currentPrices);
+    const holdings = calculateHoldings(transactions, currentPrices);
+    const result = calculatePortfolioValue(holdings, [currentPrices.BTC]);
     const afterTime = new Date().toISOString();
 
     expect(result.last_updated).toBeDefined();
@@ -99,17 +106,32 @@ describe('calculatePortfolioValue', () => {
   });
 
   it('handles portfolio with negative P/L', () => {
-    const holdings: Holding[] = [
-      { symbol: 'BTC', total_quantity: 1, average_cost: 60000 },
-      { symbol: 'ETH', total_quantity: 10, average_cost: 3000 },
+    const transactions: Transaction[] = [
+      {
+        id: '1',
+        symbol: 'BTC',
+        type: 'BUY',
+        quantity: 1,
+        price_per_unit: 60000,
+        transaction_date: '2024-01-01T00:00:00Z',
+      },
+      {
+        id: '2',
+        symbol: 'ETH',
+        type: 'BUY',
+        quantity: 10,
+        price_per_unit: 3000,
+        transaction_date: '2024-01-01T00:00:00Z',
+      },
     ];
 
-    const currentPrices: Price[] = [
-      { symbol: 'BTC', price_usd: 50000 },
-      { symbol: 'ETH', price_usd: 2500 },
-    ];
+    const currentPrices: Record<string, Price> = {
+      BTC: { symbol: 'BTC', price_usd: 50000, change_24h_pct: -5 },
+      ETH: { symbol: 'ETH', price_usd: 2500, change_24h_pct: -10 },
+    };
 
-    const result = calculatePortfolioValue(holdings, currentPrices);
+    const holdings = calculateHoldings(transactions, currentPrices);
+    const result = calculatePortfolioValue(holdings, Object.values(currentPrices));
 
     expect(result.total_value).toBe(75000);
     expect(result.total_cost).toBe(90000);
