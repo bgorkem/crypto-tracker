@@ -29,6 +29,9 @@
    → All contracts have tests?
    → All entities have models?
    → All endpoints implemented?
+   → Performance budgets defined per endpoint?
+   → Accessibility & UX consistency tasks present?
+   → Real-time update pathways covered by tests?
 9. Return: SUCCESS (tasks ready for execution)
 ```
 
@@ -69,12 +72,15 @@
 - [ ] T017 Request/response logging
 - [ ] T018 CORS and security headers
 
-## Phase 3.5: Polish
-- [ ] T019 [P] Unit tests for validation in tests/unit/test_validation.py
-- [ ] T020 Performance tests (<200ms)
-- [ ] T021 [P] Update docs/api.md
-- [ ] T022 Remove duplication
-- [ ] T023 Run manual-testing.md
+## Phase 3.5: Quality & Polish
+- [ ] T019 [P] Unit test expansion & coverage audit (≥80%)
+- [ ] T020 Performance regression suite (p95 ≤200ms endpoints)
+- [ ] T021 Real-time latency test harness (≤250ms propagation)
+- [ ] T022 [P] Accessibility & keyboard navigation tests
+- [ ] T023 [P] Update docs/api.md & architectural boundaries doc
+- [ ] T024 Refactor & remove duplication (complexity reductions)
+- [ ] T025 UI automation of primary portfolio flow
+- [ ] T026 Manual exploratory + rollback readiness checklist
 
 ## Dependencies
 - Tests (T004-T007) before implementation (T008-T014)
@@ -125,3 +131,6 @@ Task: "Integration test auth in tests/integration/test_auth.py"
 - [ ] Parallel tasks truly independent
 - [ ] Each task specifies exact file path
 - [ ] No task modifies same file as another [P] task
+- [ ] Performance & real-time tasks present
+- [ ] Accessibility tasks included
+- [ ] Coverage target tasks included

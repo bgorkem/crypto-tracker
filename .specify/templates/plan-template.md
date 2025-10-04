@@ -47,7 +47,29 @@
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+**Code Quality & Architecture Integrity**
+- [ ] Complexity budget defined (functions ≤10)
+- [ ] Layer boundaries identified (UI → services → data)
+- [ ] Planned public API surface minimal & documented
+- [ ] Technical debt items (if any) captured
+
+**Test-First Quality Assurance**
+- [ ] Test types enumerated (unit, integration, UI automation, contract)
+- [ ] Critical calculation paths listed for 100% coverage
+- [ ] Failing test scaffolds planned before coding
+- [ ] Coverage target (≥80% overall) feasible
+
+**User Experience Consistency**
+- [ ] Design system components reused (ShadCN/Tailwind tokens)
+- [ ] Loading & error state patterns specified
+- [ ] Accessibility acceptance criteria drafted
+- [ ] Performance UX targets (≤2s initial, ≤200ms interactions) recorded
+
+**Performance & Real-Time Responsiveness**
+- [ ] p95 latency targets per endpoint defined (≤200ms)
+- [ ] Real-time update latency assumption (≤250ms) validated
+- [ ] Indexing / caching considerations noted
+- [ ] Potential performance risks flagged early
 
 ## Project Structure
 

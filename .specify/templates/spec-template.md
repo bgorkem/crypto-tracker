@@ -100,6 +100,12 @@ When creating this spec from a user prompt:
 - [ ] Scope is clearly bounded
 - [ ] Dependencies and assumptions identified
 
+### Constitutional Compliance
+- [ ] Performance targets quantified (p95 latency ≤200ms, real-time ≤250ms)
+- [ ] Test strategy covers unit, integration, UI automation, contract
+- [ ] Accessibility & UX consistency criteria defined
+- [ ] Critical financial calculations identified & test-covered
+
 ---
 
 ## Execution Status
