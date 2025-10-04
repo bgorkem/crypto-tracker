@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { z } from 'zod';
+import { createTestUser, createAuthHeaders, getBaseUrl } from '../helpers/auth-helpers';
 
 const TransactionSchema = z.object({
   id: z.string().uuid(),
@@ -8,10 +9,10 @@ const TransactionSchema = z.object({
   side: z.enum(['BUY', 'SELL']),
   quantity: z.number().positive(),
   price: z.number().positive(),
-  executed_at: z.string().datetime(),
+  executed_at: z.string(),
   notes: z.string().nullable(),
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime(),
+  created_at: z.string(),
+  updated_at: z.string(),
 });
 
 const ErrorResponseSchema = z.object({
@@ -23,9 +24,23 @@ const ErrorResponseSchema = z.object({
 });
 
 describe('POST /api/portfolios/:portfolioId/transactions', () => {
-  const BASE_URL = 'http://localhost:3000';
-  const authToken = 'mock-token';
-  const mockPortfolioId = 'c7f0e9a2-8b3d-4f1e-a2c5-1d9e8f7b6a5c';
+  const BASE_URL = getBaseUrl();
+  let authToken: string;
+  let portfolioId: string;
+
+  beforeAll(async () => {
+    const { token } = await createTestUser('transactioncreate');
+    authToken = token;
+    
+    // Create a portfolio for testing
+    const createResponse = await fetch(`${BASE_URL}/api/portfolios`, {
+      method: 'POST',
+      headers: createAuthHeaders(authToken, { 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ name: 'Transaction Create Test Portfolio' }),
+    });
+    const createData = await createResponse.json();
+    portfolioId = createData.data.id;
+  });
 
   it('returns 201 with transaction on valid BUY request', async () => {
     const requestData = {
@@ -37,12 +52,9 @@ describe('POST /api/portfolios/:portfolioId/transactions', () => {
       notes: 'Initial purchase',
     };
 
-    const response = await fetch(`${BASE_URL}/api/portfolios/${mockPortfolioId}/transactions`, {
+    const response = await fetch(`${BASE_URL}/api/portfolios/${portfolioId}/transactions`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-      },
+      headers: createAuthHeaders(authToken, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(requestData),
     });
 
@@ -65,12 +77,9 @@ describe('POST /api/portfolios/:portfolioId/transactions', () => {
       notes: 'Trying to sell too much',
     };
 
-    const response = await fetch(`${BASE_URL}/api/portfolios/${mockPortfolioId}/transactions`, {
+    const response = await fetch(`${BASE_URL}/api/portfolios/${portfolioId}/transactions`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-      },
+      headers: createAuthHeaders(authToken, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(requestData),
     });
 
@@ -98,12 +107,9 @@ describe('POST /api/portfolios/:portfolioId/transactions', () => {
       notes: 'Future transaction',
     };
 
-    const response = await fetch(`${BASE_URL}/api/portfolios/${mockPortfolioId}/transactions`, {
+    const response = await fetch(`${BASE_URL}/api/portfolios/${portfolioId}/transactions`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-      },
+      headers: createAuthHeaders(authToken, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(requestData),
     });
 
@@ -128,12 +134,9 @@ describe('POST /api/portfolios/:portfolioId/transactions', () => {
       notes: '<script>alert("XSS")</script>Legitimate note',
     };
 
-    const response = await fetch(`${BASE_URL}/api/portfolios/${mockPortfolioId}/transactions`, {
+    const response = await fetch(`${BASE_URL}/api/portfolios/${portfolioId}/transactions`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-      },
+      headers: createAuthHeaders(authToken, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(requestData),
     });
 
