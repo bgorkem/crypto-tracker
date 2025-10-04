@@ -1,8 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { z } from 'zod';
+import { createTestUser, createAuthHeaders, getBaseUrl } from '../helpers/auth-helpers';
 
 const ChartDataPointSchema = z.object({
-  timestamp: z.string().datetime(),
+  timestamp: z.string(),
   price: z.number().positive(),
   volume: z.number().nonnegative(),
 });
@@ -16,16 +17,19 @@ const ChartResponseSchema = z.object({
 });
 
 describe('GET /api/charts/:symbol', () => {
-  const BASE_URL = 'http://localhost:3000';
-  const authToken = 'mock-token';
+  const BASE_URL = getBaseUrl();
+  let authToken: string;
+
+  beforeAll(async () => {
+    const { token } = await createTestUser('chartsuser');
+    authToken = token;
+  });
 
   it('returns 200 with chart data for 24h interval', async () => {
     const response = await fetch(
       `${BASE_URL}/api/charts/BTC?interval=24h`,
       {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-        },
+        headers: createAuthHeaders(authToken),
       }
     );
 
@@ -49,9 +53,7 @@ describe('GET /api/charts/:symbol', () => {
       const response = await fetch(
         `${BASE_URL}/api/charts/BTC?interval=${interval}`,
         {
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-          },
+          headers: createAuthHeaders(authToken),
         }
       );
 
@@ -70,9 +72,7 @@ describe('GET /api/charts/:symbol', () => {
     const response = await fetch(
       `${BASE_URL}/api/charts/BTC?interval=invalid`,
       {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-        },
+        headers: createAuthHeaders(authToken),
       }
     );
 
@@ -83,9 +83,7 @@ describe('GET /api/charts/:symbol', () => {
     const response = await fetch(
       `${BASE_URL}/api/charts/BTC?interval=24h`,
       {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-        },
+        headers: createAuthHeaders(authToken),
       }
     );
 
