@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { z } from 'zod';
+import { createTestUser, createAuthHeaders, getBaseUrl } from '../helpers/auth-helpers';
 
 const PortfolioResponseSchema = z.object({
   data: z.object({
@@ -21,22 +22,13 @@ const ErrorResponseSchema = z.object({
 });
 
 describe('POST /api/portfolios', () => {
-  const BASE_URL = 'http://localhost:3000';
+  const BASE_URL = getBaseUrl();
   let authToken: string;
 
   beforeAll(async () => {
-    // Create and login a test user
-    const testEmail = `portfoliocreate-${Date.now()}@testuser.com`;
-    const password = 'TestPassword123!';
-
-    const registerResponse = await fetch(`${BASE_URL}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: testEmail, password }),
-    });
-
-    const registerData = await registerResponse.json();
-    authToken = registerData.data.session.access_token;
+    // Create a test user and get auth token
+    const { token } = await createTestUser('portfoliocreate');
+    authToken = token;
   });
 
   it('returns 201 with created portfolio on valid request', async () => {
@@ -47,10 +39,9 @@ describe('POST /api/portfolios', () => {
 
     const response = await fetch(`${BASE_URL}/api/portfolios`, {
       method: 'POST',
-      headers: {
+      headers: createAuthHeaders(authToken, {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-      },
+      }),
       body: JSON.stringify(requestData),
     });
 
@@ -81,10 +72,9 @@ describe('POST /api/portfolios', () => {
 
     const response = await fetch(`${BASE_URL}/api/portfolios`, {
       method: 'POST',
-      headers: {
+      headers: createAuthHeaders(authToken, {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-      },
+      }),
       body: JSON.stringify(requestData),
     });
 
@@ -107,10 +97,9 @@ describe('POST /api/portfolios', () => {
 
     const response = await fetch(`${BASE_URL}/api/portfolios`, {
       method: 'POST',
-      headers: {
+      headers: createAuthHeaders(authToken, {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-      },
+      }),
       body: JSON.stringify(requestData),
     });
 
@@ -125,10 +114,9 @@ describe('POST /api/portfolios', () => {
 
     const response = await fetch(`${BASE_URL}/api/portfolios`, {
       method: 'POST',
-      headers: {
+      headers: createAuthHeaders(authToken, {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-      },
+      }),
       body: JSON.stringify(requestData),
     });
 

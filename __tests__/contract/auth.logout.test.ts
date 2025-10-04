@@ -1,33 +1,20 @@
 import { describe, it, expect, beforeAll } from 'vitest';
+import { createTestUser, createAuthHeaders, getBaseUrl } from '../helpers/auth-helpers';
 
 describe('POST /api/auth/logout', () => {
-  const BASE_URL = 'http://localhost:3000';
+  const BASE_URL = getBaseUrl();
   let authToken: string;
 
   beforeAll(async () => {
-    // Create a test user and get a real auth token
-    const uniqueEmail = `logoutuser-${Date.now()}@testuser.com`;
-    
-    const registerResponse = await fetch(`${BASE_URL}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: uniqueEmail,
-        password: 'TestPassword123!',
-        displayName: 'Logout Test User'
-      }),
-    });
-    
-    const registerData = await registerResponse.json();
-    authToken = registerData.data.session.access_token;
+    // Create a test user and get auth token
+    const { token } = await createTestUser('logoutuser');
+    authToken = token;
   });
 
   it('returns 204 No Content on successful logout', async () => {
     const response = await fetch(`${BASE_URL}/api/auth/logout`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-      },
+      headers: createAuthHeaders(authToken),
     });
 
     expect(response.status).toBe(204);

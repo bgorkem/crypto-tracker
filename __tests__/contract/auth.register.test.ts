@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
+import { getBaseUrl } from '../helpers/auth-helpers';
 
 const RegisterResponseSchema = z.object({
   data: z.object({
@@ -25,7 +26,7 @@ const ErrorResponseSchema = z.object({
 });
 
 describe('POST /api/auth/register', () => {
-  const BASE_URL = 'http://localhost:3000';
+  const BASE_URL = getBaseUrl();
 
   it('returns 201 with user and session on valid request', async () => {
     // Generate unique email to avoid conflicts with existing test data

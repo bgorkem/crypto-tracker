@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
+import { createTestUser, getBaseUrl } from '../helpers/auth-helpers';
 
 const LoginResponseSchema = z.object({
   data: z.object({
@@ -25,23 +26,15 @@ const ErrorResponseSchema = z.object({
 });
 
 describe('POST /api/auth/login', () => {
-  const BASE_URL = 'http://localhost:3000';
+  const BASE_URL = getBaseUrl();
   let testEmail: string;
-  const testPassword = 'CorrectPassword123!';
+  let testPassword: string;
 
   it('returns 200 with user and session on valid credentials', async () => {
     // Create a unique test user for this test
-    testEmail = `loginuser-${Date.now()}@testuser.com`;
-    
-    // First register the user
-    await fetch(`${BASE_URL}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: testEmail,
-        password: testPassword,
-      }),
-    });
+    const { email, password } = await createTestUser('loginuser');
+    testEmail = email;
+    testPassword = password;
 
     // Then login
     const requestData = {

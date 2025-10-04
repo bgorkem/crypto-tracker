@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { z } from 'zod';
+import { createTestUser, createAuthHeaders, getBaseUrl } from '../helpers/auth-helpers';
 
 const PortfolioSchema = z.object({
   id: z.string().uuid(),
@@ -22,22 +23,13 @@ const PortfoliosListResponseSchema = z.object({
 });
 
 describe('GET /api/portfolios', () => {
-  const BASE_URL = 'http://localhost:3000';
+  const BASE_URL = getBaseUrl();
   let authToken: string;
 
   beforeAll(async () => {
-    // Create and login a test user
-    const testEmail = `portfoliouser-${Date.now()}@testuser.com`;
-    const password = 'TestPassword123!';
-
-    const registerResponse = await fetch(`${BASE_URL}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: testEmail, password }),
-    });
-
-    const registerData = await registerResponse.json();
-    authToken = registerData.data.session.access_token;
+    // Create a test user and get auth token
+    const { token } = await createTestUser('portfoliolist');
+    authToken = token;
   });
 
   it('returns 401 UNAUTHORIZED without auth token', async () => {
@@ -48,9 +40,7 @@ describe('GET /api/portfolios', () => {
 
   it('returns 200 with empty portfolios array for new user', async () => {
     const response = await fetch(`${BASE_URL}/api/portfolios`, {
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-      },
+      headers: createAuthHeaders(authToken),
     });
 
     expect(response.status).toBe(200);
@@ -67,9 +57,7 @@ describe('GET /api/portfolios', () => {
 
   it('supports pagination with limit and offset query params', async () => {
     const response = await fetch(`${BASE_URL}/api/portfolios?limit=10&offset=0`, {
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-      },
+      headers: createAuthHeaders(authToken),
     });
 
     expect(response.status).toBe(200);
