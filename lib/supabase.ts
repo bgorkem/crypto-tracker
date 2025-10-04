@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import type { Database } from '../types/database.generated.types';
+import type { Database } from './types/database.generated.types';
 
 /**
  * Supabase client configuration

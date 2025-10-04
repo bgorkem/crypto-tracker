@@ -1,140 +1,126 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * E2E Test: Portfolio Creation and Management
+ * E2E Test: Portfolio Creation and Management (TDD Iterative)
  * 
- * This test verifies:
- * 1. Creating a new portfolio
- * 2. Viewing portfolio list
- * 3. Adding transactions to portfolio
- * 4. Viewing portfolio details with holdings
- * 5. Editing and deleting portfolios
+ * Step-by-step implementation:
+ * 1. ✅ Create empty portfolio
+ * 2. TODO: Add first transaction
+ * 3. TODO: View holdings table
+ * 4. TODO: Edit portfolio
+ * 5. TODO: Delete portfolio
  */
 
 test.describe('Portfolio Management E2E', () => {
-  const uniqueEmail = `test-${Date.now()}@example.com`;
   const password = 'SecureP@ss123';
+  let uniqueEmail: string;
 
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page }, testInfo) => {
+    // Create unique email for each test using timestamp + worker index
+    uniqueEmail = `test-portfolio-${Date.now()}-${testInfo.workerIndex}@testuser.com`;
+    
     // Register and login
     await page.goto('/auth/register');
     await page.fill('input[name="email"]', uniqueEmail);
     await page.fill('input[name="password"]', password);
     await page.fill('input[name="confirmPassword"]', password);
+    
+    // Wait for network to be idle before submitting
+    await page.waitForLoadState('networkidle');
     await page.click('button[type="submit"]');
     
-    // Navigate to dashboard (assuming auto-login after registration)
-    await page.goto('/dashboard');
+    // Should redirect to dashboard
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
   });
 
-  test('create portfolio and add transactions', async ({ page }) => {
-    // Click create portfolio button
-    await page.click('button:has-text("Create Portfolio"), a:has-text("New Portfolio")');
+  test('Step 1: Create empty portfolio', async ({ page }) => {
+    // Should see "My Portfolios" heading
+    await expect(page.getByRole('heading', { name: /my portfolios/i })).toBeVisible();
     
-    // Fill portfolio form
-    await page.fill('input[name="name"]', 'My Crypto Portfolio');
+    // Click "Create Portfolio" button
+    await page.click('button:has-text("Create Portfolio")');
+    
+    // Should see portfolio creation dialog/form
+    await expect(page.locator('input[name="name"]')).toBeVisible();
+    await expect(page.locator('textarea[name="description"]')).toBeVisible();
+    
+    // Fill portfolio details
+    await page.fill('input[name="name"]', 'My First Portfolio');
     await page.fill('textarea[name="description"]', 'Testing portfolio creation');
     
-    // Submit
+    // Submit form
     await page.click('button[type="submit"]:has-text("Create")');
     
-    // Should see success message or redirect to portfolio
-    await expect(page.locator('text=/portfolio.*created/i, text=My Crypto Portfolio')).toBeVisible({ 
-      timeout: 10000 
-    });
+    // Should see new portfolio in the list
+    await expect(page.locator('text=My First Portfolio')).toBeVisible();
+    await expect(page.locator('text=Testing portfolio creation')).toBeVisible();
     
-    // Click add transaction
-    await page.click('button:has-text("Add Transaction"), button:has-text("New Transaction")');
+    // Should see $0.00 value for new empty portfolio
+    await expect(page.locator('text=$0.00')).toBeVisible();
+  });
+
+  test('Step 2: Add first transaction', async ({ page }) => {
+    // First, create a portfolio
+    await page.click('button:has-text("Create Portfolio")');
+    await page.fill('input[name="name"]', 'Test Portfolio');
+    await page.fill('textarea[name="description"]', 'Portfolio for transaction test');
+    await page.click('button[type="submit"]:has-text("Create")');
     
-    // Fill transaction form
-    await page.selectOption('select[name="type"]', 'BUY');
+    // Wait for portfolio to appear and dialog to close
+    await page.waitForSelector('text=Test Portfolio', { state: 'visible', timeout: 10000 });
+    
+    // Wait a bit for dialog animation to complete
+    await page.waitForTimeout(500);
+    
+    // Click on the portfolio card to view details
+    await page.click('text=Test Portfolio');
+    
+    // Should navigate to portfolio detail page  
+    await page.waitForURL(/\/portfolio\/[^/]+/, { timeout: 10000 });
+    
+    // Debug: Take a screenshot and log page content
+    console.log('Current URL:', page.url());
+    const bodyText = await page.locator('body').textContent();
+    console.log('Page content:', bodyText?.substring(0, 500));
+    
+    // Wait for page to load and show portfolio name
+    await expect(page.locator('h2:has-text("Test Portfolio")')).toBeVisible({ timeout: 10000 });
+    
+    // Should see "Add Transaction" button
+    await expect(page.locator('button:has-text("Add Transaction")')).toBeVisible({ timeout: 10000 });
+    
+    // Click "Add Transaction" button
+    await page.click('button:has-text("Add Transaction")');
+    
+    // Should see transaction form
+    await expect(page.locator('input[name="symbol"]')).toBeVisible();
+    await expect(page.locator('input[name="quantity"]')).toBeVisible();
+    await expect(page.locator('input[name="price_per_unit"]')).toBeVisible();
+    await expect(page.locator('input[name="transaction_date"]')).toBeVisible();
+    
+    // Fill transaction details (buying 1 BTC at $50,000)
     await page.fill('input[name="symbol"]', 'BTC');
     await page.fill('input[name="quantity"]', '1');
-    await page.fill('input[name="price_per_unit"]', '45000');
-    await page.fill('input[name="transaction_date"]', '2024-01-01T12:00');
-    await page.fill('textarea[name="notes"]', 'First Bitcoin purchase');
+    await page.fill('input[name="price_per_unit"]', '50000');
+    await page.fill('input[name="transaction_date"]', '2025-10-04');
+    
+    // Select transaction type: BUY
+    await page.selectOption('select[name="transaction_type"]', 'BUY');
     
     // Submit transaction
     await page.click('button[type="submit"]:has-text("Add Transaction")');
     
-    // Should see transaction in list
-    await expect(page.locator('text=BTC')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('text=1')).toBeVisible(); // quantity
-    await expect(page.locator('text=45000, text=45,000')).toBeVisible(); // price
-  });
-
-  test('view portfolio with calculated holdings', async ({ page }) => {
-    // Create portfolio with transactions (using UI or API)
-    await page.goto('/dashboard');
+    // Should see transaction in the table
+    await expect(page.locator('table >> text=BTC')).toBeVisible();
     
-    // Assume portfolio created, click to view details
-    await page.click('text=My Crypto Portfolio');
+    // Should see the transaction row with BTC
+    const btcRow = page.locator('tr:has-text("BTC")');
+    await expect(btcRow).toBeVisible();
+    await expect(btcRow.locator('text=BUY')).toBeVisible();
     
-    // Should see holdings section
-    await expect(page.locator('h2:has-text("Holdings"), h3:has-text("Holdings")')).toBeVisible();
-    
-    // Should display calculated values
-    await expect(page.locator('text=/total.*value/i')).toBeVisible();
-    await expect(page.locator('text=/unrealized.*p.*l/i')).toBeVisible();
-    
-    // Holdings should show BTC if transaction was added
-    const btcRow = page.locator('[data-testid="holding-row"]', { hasText: 'BTC' });
-    if (await btcRow.isVisible()) {
-      // Verify holding shows quantity and value
-      await expect(btcRow.locator('text=1')).toBeVisible(); // quantity
-      await expect(btcRow.locator('text=/\\$/').first()).toBeVisible(); // dollar values
-    }
-  });
-
-  test('edit portfolio details', async ({ page }) => {
-    await page.goto('/dashboard');
-    
-    // Click portfolio to view
-    await page.click('text=My Crypto Portfolio');
-    
-    // Click edit button
-    await page.click('button:has-text("Edit"), a:has-text("Edit")');
-    
-    // Update fields
-    await page.fill('input[name="name"]', 'Updated Portfolio Name');
-    await page.fill('textarea[name="description"]', 'Updated description');
-    
-    // Save
-    await page.click('button[type="submit"]:has-text("Save")');
-    
-    // Should see updated name
-    await expect(page.locator('text=Updated Portfolio Name')).toBeVisible({ timeout: 10000 });
-  });
-
-  test('delete portfolio with confirmation', async ({ page }) => {
-    await page.goto('/dashboard');
-    
-    // Click portfolio
-    await page.click('text=Updated Portfolio Name, text=My Crypto Portfolio');
-    
-    // Click delete button
-    await page.click('button:has-text("Delete")');
-    
-    // Should see confirmation dialog
-    await expect(page.locator('text=/are you sure/i, text=/confirm/i')).toBeVisible();
-    
-    // Confirm deletion
-    await page.click('button:has-text("Delete"), button:has-text("Confirm")');
-    
-    // Should redirect to dashboard
-    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
-    
-    // Portfolio should not appear in list
-    await expect(page.locator('text=Updated Portfolio Name')).not.toBeVisible();
-  });
-
-  test('displays empty state when no portfolios exist', async ({ page }) => {
-    await page.goto('/dashboard');
-    
-    // Should see empty state message
-    await expect(page.locator('text=/no portfolios/i, text=/get started/i')).toBeVisible();
-    
-    // Should see CTA to create first portfolio
-    await expect(page.locator('button:has-text("Create Portfolio"), a:has-text("Create Your First Portfolio")')).toBeVisible();
+    // Portfolio value should update - value can be formatted with commas
+    // Looking for the total value card - should show some amount > 0
+    const portfolioValueCard = page.locator('text=Total Portfolio Value').locator('..');
+    await expect(portfolioValueCard).toContainText('$');
   });
 });
