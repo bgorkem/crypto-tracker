@@ -98,5 +98,34 @@ Production env vars → Deployed app (TEST_MODE=false or omitted)
 
 Tests use unique email addresses (timestamp-based) to avoid conflicts:
 ```typescript
-const uniqueEmail = `newuser-${Date.now()}@example.com`;
+const uniqueEmail = `newuser-${Date.now()}@testuser.com`;
 ```
+
+### Test Cleanup
+
+After running contract tests, test users accumulate in the Supabase `auth.users` table. To clean them up:
+
+```bash
+npm run test:cleanup
+```
+
+**What it does:**
+- Deletes all test users with `@testuser.com` domain
+- Uses admin client with service role key
+- Safe operation - only deletes users matching the test domain pattern
+
+**When to run:**
+- After running contract tests
+- When Supabase auth console shows many test users
+- Periodically during development
+
+**Example output:**
+```
+🧹 Starting test user cleanup...
+🧹 Cleaning up 25 test users...
+✅ Cleanup complete
+```
+
+**Note:** Cleanup requires environment variables in `.env.local`:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`

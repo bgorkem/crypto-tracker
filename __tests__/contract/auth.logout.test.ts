@@ -6,7 +6,8 @@ describe('POST /api/auth/logout', () => {
 
   beforeAll(async () => {
     // Create a test user and get a real auth token
-    const uniqueEmail = `logoutuser-${Date.now()}@example.com`;
+    const uniqueEmail = `logoutuser-${Date.now()}@testuser.com`;
+    
     const registerResponse = await fetch(`${BASE_URL}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -47,7 +48,8 @@ describe('POST /api/auth/logout', () => {
     // TODO: This test requires /api/portfolios endpoint to be implemented
     // Skip for now - will be tested when portfolio endpoints are ready
     // Get a fresh token for this test
-    const uniqueEmail = `sessiontest-${Date.now()}@example.com`;
+    const uniqueEmail = `sessiontest-${Date.now()}@testuser.com`;
+    
     const registerResponse = await fetch(`${BASE_URL}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

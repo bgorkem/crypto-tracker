@@ -29,7 +29,7 @@ describe('POST /api/auth/register', () => {
 
   it('returns 201 with user and session on valid request', async () => {
     // Generate unique email to avoid conflicts with existing test data
-    const uniqueEmail = `newuser-${Date.now()}@example.com`;
+    const uniqueEmail = `newuser-${Date.now()}@testuser.com`;
     const requestData = {
       email: uniqueEmail,
       password: 'SecurePass123!',
@@ -80,7 +80,7 @@ describe('POST /api/auth/register', () => {
 
   it('returns 400 WEAK_PASSWORD on password < 8 characters', async () => {
     const requestData = {
-      email: 'user@example.com',
+      email: 'user@testuser.com',
       password: 'weak',
     };
 
@@ -103,7 +103,7 @@ describe('POST /api/auth/register', () => {
 
   it('returns 409 EMAIL_EXISTS on duplicate email', async () => {
     // Generate unique email for this test
-    const uniqueEmail = `existing-${Date.now()}@example.com`;
+    const uniqueEmail = `existing-${Date.now()}@testuser.com`;
     const requestData = {
       email: uniqueEmail,
       password: 'SecurePass123!',

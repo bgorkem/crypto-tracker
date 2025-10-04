@@ -1,5 +1,11 @@
 import '@testing-library/jest-dom';
 import { beforeAll, afterEach, afterAll } from 'vitest';
+import { loadEnvConfig } from '@next/env';
+import { resolve } from 'path';
+
+// Load environment variables from .env.local for tests
+const projectDir = resolve(__dirname, '..');
+loadEnvConfig(projectDir);
 
 // Setup global test environment
 beforeAll(() => {
