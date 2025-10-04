@@ -1,6 +1,6 @@
-# Feature Specification: User Registration, Portfolio & Real-Time Tracking
+# Feature Specification: Crypto Portfolio Tracker MVP
 
-**Feature Branch**: `001-users-can-register`  
+**Feature Branch**: `001-MVP-features`  
 **Created**: 2025-10-04  
 **Status**: Draft  
 **Input**: Users can register (social login or email/password), create portfolios with initial positions, record/edit/delete buy/sell transactions, track value progress with realtime price updates from an external crypto price provider, automatic holding calculations, view 30+ major cryptocurrency prices, last 24hr changes, and portfolio value via charts in a dashboard.
