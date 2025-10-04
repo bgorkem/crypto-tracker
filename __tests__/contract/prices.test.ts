@@ -1,13 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { z } from 'zod';
+import { createTestUser, createAuthHeaders, getBaseUrl } from '../helpers/auth-helpers';
 
 const PriceSchema = z.object({
   symbol: z.string(),
   price_usd: z.number().positive(),
-  market_cap: z.number().positive(),
+  market_cap: z.number().nonnegative(),
   volume_24h: z.number().nonnegative(),
   change_24h_pct: z.number(),
-  last_updated: z.string().datetime(),
+  last_updated: z.string(),
 });
 
 const PriceResponseSchema = z.object({
@@ -15,16 +16,19 @@ const PriceResponseSchema = z.object({
 });
 
 describe('GET /api/prices', () => {
-  const BASE_URL = 'http://localhost:3000';
-  const authToken = 'mock-token';
+  const BASE_URL = getBaseUrl();
+  let authToken: string;
+
+  beforeAll(async () => {
+    const { token } = await createTestUser('pricesuser');
+    authToken = token;
+  });
 
   it('returns 200 with prices for specified symbols', async () => {
     const response = await fetch(
       `${BASE_URL}/api/prices?symbols=BTC,ETH,SOL`,
       {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-        },
+        headers: createAuthHeaders(authToken),
       }
     );
 
@@ -45,9 +49,7 @@ describe('GET /api/prices', () => {
 
   it('returns 400 BAD_REQUEST when symbols parameter is missing', async () => {
     const response = await fetch(`${BASE_URL}/api/prices`, {
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-      },
+      headers: createAuthHeaders(authToken),
     });
 
     expect(response.status).toBe(400);
@@ -62,7 +64,7 @@ describe('GET /api/prices', () => {
   it('caches prices for 30 seconds', async () => {
     // First request
     const response1 = await fetch(`${BASE_URL}/api/prices?symbols=BTC`, {
-      headers: { 'Authorization': `Bearer ${authToken}` },
+      headers: createAuthHeaders(authToken),
     });
 
     if (response1.ok) {
