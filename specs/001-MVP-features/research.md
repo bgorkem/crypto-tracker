@@ -109,6 +109,7 @@
 - HTTPS enforced in production
 - CSRF protection via Supabase SDK
 - Rate limiting on auth endpoints (Supabase built-in)
+- Input sanitization: All free-text fields (portfolio name/description, transaction notes) sanitized to prevent XSS and injection attacks
 
 ---
 

@@ -69,6 +69,7 @@ adjustments in 24/7 markets.
 - Authentication MUST use Supabase Auth—no custom password flows.
 - Secrets NEVER hardcoded; environment management via platform provider.
 - PII (if later introduced) MUST be classified and access-limited; current scope: minimal user profile + email.
+- All user-provided text inputs MUST be sanitized to prevent XSS, SQL injection, and other injection attacks.
 
 ### Change Control
 - Feature flags for risky or progressive enhancements; default off until validated.

@@ -49,8 +49,8 @@ CREATE POLICY "Users can CRUD own portfolios"
 ```
 
 **Validation Rules** (from FR-003):
-- name: required, max 100 characters
-- description: optional
+- name: required, max 100 characters, sanitized for XSS prevention
+- description: optional, sanitized for XSS prevention
 - base_currency: must be 'USD' (enforce in application, FK constraint future-proofed for multi-currency)
 
 **State Transitions**: None (simple CRUD entity)
@@ -88,7 +88,7 @@ CREATE POLICY "Users can CRUD own transactions"
 
 **Validation Rules**:
 - **FR-004**: symbol, quantity > 0, price > 0, executed_at <= NOW()
-- **notes**: optional, max 1000 characters (application-level validation)
+- **notes**: optional, max 1000 characters, sanitized for XSS prevention (application-level validation)
 - **FR-005**: SELL quantity validation (application-level: check total holdings before insert)
 - **FR-006**: All fields editable except id, created_at (updated_at auto-bumped on UPDATE trigger)
 - **FR-019**: Pagination at 100 transactions via cursor-based query
@@ -500,6 +500,73 @@ export type Database = {
     };
   };
 };
+```
+
+---
+
+## Security & Input Sanitization
+
+**Critical Requirement** (NFR-013, Constitution): All user-provided text inputs MUST be sanitized before storage and display.
+
+### Free-Text Fields Requiring Sanitization
+
+1. **Portfolio**:
+   - `name` (max 100 chars)
+   - `description` (unlimited)
+
+2. **Transaction**:
+   - `notes` (max 1000 chars)
+
+### Implementation Strategy
+
+**Server-Side (Critical)**:
+```typescript
+// Use DOMPurify or similar library
+import DOMPurify from 'isomorphic-dompurify';
+
+function sanitizeInput(input: string): string {
+  return DOMPurify.sanitize(input, {
+    ALLOWED_TAGS: [], // Strip all HTML tags
+    ALLOWED_ATTR: []  // Strip all attributes
+  });
+}
+
+// Example: Before database insert
+const sanitizedNotes = sanitizeInput(transaction.notes);
+```
+
+**Database Layer**:
+- Supabase parameterized queries (automatic SQL injection prevention)
+- Row-Level Security (RLS) policies enforce data isolation
+- No raw SQL concatenation allowed
+
+**Client-Side (Defense in Depth)**:
+- React automatically escapes JSX content (XSS prevention)
+- Use `textContent` over `innerHTML` for user-generated text
+- Validate input length limits before submission
+
+### Attack Vectors Mitigated
+
+- **XSS (Cross-Site Scripting)**: HTML/JavaScript injection in notes, names, descriptions
+- **SQL Injection**: Parameterized queries via Supabase client
+- **Command Injection**: N/A (no shell command execution from user input)
+- **CSRF**: Supabase SDK includes CSRF tokens
+- **Path Traversal**: N/A (no file system access from user input)
+
+### Test Coverage
+
+- Unit tests: Verify sanitization removes `<script>`, `<img onerror>`, event handlers
+- Integration tests: Ensure sanitized data roundtrips correctly (DB → API → UI)
+- Security tests: Attempt XSS payloads from OWASP XSS cheat sheet
+
+**Example Test Cases**:
+```typescript
+// Should sanitize XSS attempt
+expect(sanitizeInput('<script>alert("XSS")</script>')).toBe('');
+expect(sanitizeInput('Hello <b>World</b>')).toBe('Hello World');
+
+// Should preserve safe text
+expect(sanitizeInput('BTC purchase @ $30,000')).toBe('BTC purchase @ $30,000');
 ```
 
 ---

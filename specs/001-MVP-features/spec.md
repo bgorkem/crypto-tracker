@@ -113,6 +113,7 @@ A new user signs up, creates a portfolio, adds initial BUY transactions for seve
 - **NFR-010**: Stale data indicator appears if no price update for > threshold (see FR-015).
 - **NFR-011**: Error paths (feed outages, validation errors) must surface actionable guidance.
 - **NFR-012**: Logging includes correlation IDs for user actions and price update batches.
+- **NFR-013**: All free-text user inputs (portfolio name, description, transaction notes) MUST be sanitized to prevent XSS attacks and SQL injection.
 
 ### Key Entities *(include if feature involves data)*
 - **User**: id, email, auth_provider, created_at
