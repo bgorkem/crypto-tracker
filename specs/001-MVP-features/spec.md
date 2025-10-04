@@ -10,6 +10,15 @@
 Template steps conceptually satisfied by drafting below. Ambiguities explicitly marked.
 ```
 
+## Clarifications
+
+### Session 2025-10-04
+- Q: Which social authentication providers should be supported for user registration? → A: Google only
+- Q: How long after creation should users be allowed to edit transactions? → A: Unrestricted (edit anytime)
+- Q: At what transaction count should the system start using pagination or lazy loading? → A: 100 transactions
+- Q: What should the default set of time intervals be for portfolio value charts? → A: 24 hours, 7 days, 30 days, 90 days, All time
+- Q: When should the system consider price data "stale" and display a warning? → A: 30 seconds
+
 ---
 
 ## ⚡ Quick Guidelines
@@ -65,25 +74,25 @@ A new user signs up, creates a portfolio, adds initial BUY transactions for seve
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
-- **FR-001**: System MUST support user registration via email/password and at least one social provider [NEEDS CLARIFICATION: which provider(s)?].
+- **FR-001**: System MUST support user registration via email/password and Google OAuth.
 - **FR-002**: System MUST support secure authentication and session handling for all protected routes.
 - **FR-003**: System MUST allow users to create multiple portfolios (name required, description optional).
 - **FR-004**: System MUST allow adding BUY and SELL transactions: symbol, quantity (>0), execution price (>0), timestamp (default now).
 - **FR-005**: System MUST prevent SELL quantity greater than current holding.
-- **FR-006**: System MUST allow editing transaction quantity, price, timestamp (within allowed window) [NEEDS CLARIFICATION: edit window duration?].
+- **FR-006**: System MUST allow editing transaction quantity, price, and timestamp at any time after creation.
 - **FR-007**: System MUST allow deletion of transactions with immediate recalculation of derived holdings.
 - **FR-008**: System MUST maintain derived holdings per (portfolio, symbol): total quantity, average cost, market value, unrealized P/L.
 - **FR-009**: System MUST fetch price data for ≥30 supported symbols at configured interval or streaming feed.
 - **FR-010**: System MUST compute total portfolio value = Σ (holding quantity × latest price) on each price or transaction change.
 - **FR-011**: System MUST display 24h price change (absolute & percent) for each asset.
-- **FR-012**: System MUST present a portfolio allocation breakdown (% by market value) and top N assets (default 5) [NEEDS CLARIFICATION: N configurable?].
-- **FR-013**: System MUST provide a value-over-time chart for at least 30 days with date range filters (7D, 30D, 90D, 1Y, ALL) [NEEDS CLARIFICATION: confirm intervals].
+- **FR-012**: System must display warning/error indicator when price data is stale (>30 seconds old).
+- **FR-013**: System MUST provide a value-over-time chart for at least 30 days with date range filters matching the dashboard intervals.
 - **FR-014**: System MUST persist all user, portfolio, transaction data reliably with user scoping.
-- **FR-015**: System MUST show last price update timestamp and stale indicator if no update > configurable threshold (e.g., 30s) [NEEDS CLARIFICATION: threshold].
-- **FR-016**: System MUST support base currency USD initially; architecture prepared for future multi-currency.
+- **FR-015**: System MUST show last price update timestamp and stale indicator if no update for >30 seconds.
+- **FR-016**: Dashboard must display portfolio value over time with chart/graph intervals: 24 hours, 7 days, 30 days, 90 days, All time
 - **FR-017**: System MUST validate symbols against supported list; unsupported symbols rejected with error.
 - **FR-018**: System MUST record an audit log (create/edit/delete transaction, portfolio changes).
-- **FR-019**: System MUST support pagination or lazy loading when transaction count exceeds threshold [NEEDS CLARIFICATION: threshold value].
+- **FR-019**: System MUST support pagination or lazy loading when transaction count exceeds 100 transactions.
 - **FR-020**: System MUST allow bulk initial transaction entry when creating a portfolio [NEEDS CLARIFICATION: maximum items?].
 - **FR-021**: System MUST handle partial price feed failures (some symbols missing) by marking only affected rows as stale.
 - **FR-022**: System MUST expose per-asset unrealized P/L and portfolio total P/L.
@@ -104,17 +113,6 @@ A new user signs up, creates a portfolio, adds initial BUY transactions for seve
 - **NFR-010**: Stale data indicator appears if no price update for > threshold (see FR-015).
 - **NFR-011**: Error paths (feed outages, validation errors) must surface actionable guidance.
 - **NFR-012**: Logging includes correlation IDs for user actions and price update batches.
-
-### Ambiguities / Clarifications Needed
-- **CL-001**: Social auth providers: Google only or add GitHub/Apple?
-- **CL-002**: Transaction edit time window (unrestricted, 24h, 30d)?
-- **CL-003**: Pagination threshold for transactions (500? 1000?)
-- **CL-004**: Supported chart intervals (confirm set: 7D, 30D, 90D, 1Y, ALL)
-- **CL-005**: Stale price threshold (30s? 60s?)
-- **CL-006**: Bulk initial import max transactions count?
-- **CL-007**: Highlight large volatility requirement scope & threshold (>20% in 5m?)
-- **CL-008**: Provider rate limits & acceptable polling interval vs streaming preference
-
 
 ### Key Entities *(include if feature involves data)*
 - **User**: id, email, auth_provider, created_at
