@@ -13,7 +13,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
-  const supabase = createClient();
+  const supabase = createClient(); // For session management
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
@@ -46,24 +46,40 @@ export default function LoginPage() {
     setErrors({});
 
     try {
-      // Use Supabase client for authentication
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      // Use our tested API endpoint
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (error) {
-        if (error.message.includes('Invalid') || error.message.includes('credentials')) {
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 401) {
           setErrors({ general: 'Invalid email or password' });
-        } else if (error.message.includes('Email not confirmed')) {
+        } else if (response.status === 403) {
           setErrors({ general: 'Please verify your email before logging in' });
+        } else if (response.status === 400) {
+          if (data.code === 'INVALID_EMAIL') {
+            setErrors({ email: 'Invalid email format' });
+          } else {
+            setErrors({ general: data.message || 'Invalid input' });
+          }
         } else {
-          setErrors({ general: error.message || 'Login failed' });
+          setErrors({ general: data.message || 'Login failed' });
         }
         return;
       }
 
-      // Session is automatically stored by Supabase client
+      // Store session using Supabase client
+      if (data.data?.session) {
+        await supabase.auth.setSession({
+          access_token: data.data.session.access_token,
+          refresh_token: data.data.session.refresh_token,
+        });
+      }
+
       // Login successful, redirect to dashboard
       router.push('/dashboard');
     } catch (error) {

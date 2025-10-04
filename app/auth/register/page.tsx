@@ -15,7 +15,7 @@ export default function RegisterPage() {
   const [errors, setErrors] = useState<{ email?: string; password?: string; confirmPassword?: string; general?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);
-  const supabase = createClient();
+  const supabase = createClient(); // For session management
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
@@ -44,17 +44,19 @@ export default function RegisterPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleError = (error: { message?: string; status?: number }) => {
-    const message = error.message || '';
-    
-    if (message.includes('already registered') || message.includes('already exists')) {
+  const handleError = (response: Response, data: { code?: string; message?: string }) => {
+    if (response.status === 409) {
       setErrors({ email: 'Email already exists' });
-    } else if (message.includes('Invalid') && message.includes('email')) {
-      setErrors({ email: 'Invalid email format' });
-    } else if (message.includes('Password') && message.includes('weak')) {
-      setErrors({ password: 'Password must be at least 8 characters' });
+    } else if (response.status === 400) {
+      if (data.code === 'INVALID_EMAIL') {
+        setErrors({ email: 'Invalid email format' });
+      } else if (data.code === 'WEAK_PASSWORD') {
+        setErrors({ password: 'Password must be at least 8 characters' });
+      } else {
+        setErrors({ general: data.message || 'Invalid input' });
+      }
     } else {
-      setErrors({ general: message || 'Registration failed' });
+      setErrors({ general: data.message || 'Registration failed' });
     }
   };
 
@@ -69,27 +71,29 @@ export default function RegisterPage() {
     setErrors({});
 
     try {
-      // Use Supabase client for registration
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
+      // Use our tested API endpoint with TEST_MODE support
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (error) {
-        handleError({ message: error.message });
+      const data = await response.json();
+
+      if (!response.ok) {
+        handleError(response, data);
         return;
       }
 
-      // Check if user was created and has a session (auto-confirmed)
-      if (data.session) {
-        // Auto-login successful (TEST_MODE or email confirmation disabled)
+      // Store session using Supabase client
+      if (data.data?.session) {
+        await supabase.auth.setSession({
+          access_token: data.data.session.access_token,
+          refresh_token: data.data.session.refresh_token,
+        });
+        
+        // Auto-login successful (TEST_MODE enabled)
         router.push('/dashboard');
-      } else if (data.user && data.user.identities && data.user.identities.length === 0) {
-        // User already exists
-        setErrors({ email: 'Email already exists' });
       } else {
         // Email verification required
         setVerificationSent(true);
