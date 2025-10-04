@@ -237,3 +237,50 @@ export async function POST(
 
   return NextResponse.json({ data: responseData }, { status: 201 });
 }
+
+/**
+ * DELETE /api/portfolios/[id]/transactions?symbol=XXX
+ * Bulk delete all transactions for a specific symbol
+ */
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const params = await context.params;
+  const { id: portfolioId } = params;
+
+  const authHeader = request.headers.get('authorization');
+  const token = authHeader?.replace('Bearer ', '');
+
+  const validationResult = await validatePortfolioAccess(token, portfolioId);
+  if (validationResult.error) {
+    return validationResult.error;
+  }
+
+  const { searchParams } = new URL(request.url);
+  const symbol = searchParams.get('symbol');
+
+  if (!symbol) {
+    return NextResponse.json(
+      { error: { code: 'BAD_REQUEST', message: 'Symbol parameter is required' } },
+      { status: 400 }
+    );
+  }
+
+  const supabase = createAuthenticatedClient(token!);
+
+  const { error } = await supabase
+    .from('transactions')
+    .delete()
+    .eq('portfolio_id', portfolioId)
+    .eq('symbol', symbol);
+
+  if (error) {
+    return NextResponse.json(
+      { error: { code: 'DATABASE_ERROR', message: 'Failed to delete transactions' } },
+      { status: 500 }
+    );
+  }
+
+  return new NextResponse(null, { status: 204 });
+}
