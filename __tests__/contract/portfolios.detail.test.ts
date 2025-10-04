@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { z } from 'zod';
+import { createTestUser, createAuthHeaders, getBaseUrl } from '../helpers/auth-helpers';
 
 const HoldingSchema = z.object({
   symbol: z.string(),
@@ -18,8 +19,8 @@ const PortfolioDetailResponseSchema = z.object({
       name: z.string(),
       description: z.string().nullable(),
       base_currency: z.string(),
-      created_at: z.string().datetime(),
-      updated_at: z.string().datetime(),
+      created_at: z.string(),
+      updated_at: z.string(),
     }),
     holdings: z.array(HoldingSchema),
     summary: z.object({
@@ -32,15 +33,27 @@ const PortfolioDetailResponseSchema = z.object({
 });
 
 describe('GET /api/portfolios/:id', () => {
-  const BASE_URL = 'http://localhost:3000';
-  const authToken = 'mock-token';
-  const mockPortfolioId = 'c7f0e9a2-8b3d-4f1e-a2c5-1d9e8f7b6a5c';
+  const BASE_URL = getBaseUrl();
+  let authToken: string;
+  let portfolioId: string;
+
+  beforeAll(async () => {
+    const { token } = await createTestUser('portfoliodetail');
+    authToken = token;
+    
+    // Create a portfolio for testing
+    const createResponse = await fetch(`${BASE_URL}/api/portfolios`, {
+      method: 'POST',
+      headers: createAuthHeaders(authToken, { 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ name: 'Test Portfolio' }),
+    });
+    const createData = await createResponse.json();
+    portfolioId = createData.data.id;
+  });
 
   it('returns 200 with portfolio details and holdings', async () => {
-    const response = await fetch(`${BASE_URL}/api/portfolios/${mockPortfolioId}`, {
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-      },
+    const response = await fetch(`${BASE_URL}/api/portfolios/${portfolioId}`, {
+      headers: createAuthHeaders(authToken),
     });
 
     expect(response.status).toBe(200);
@@ -50,25 +63,23 @@ describe('GET /api/portfolios/:id', () => {
     expect(validationResult.success).toBe(true);
     
     if (validationResult.success) {
-      expect(validationResult.data.data.portfolio.id).toBe(mockPortfolioId);
+      expect(validationResult.data.data.portfolio.id).toBe(portfolioId);
       expect(Array.isArray(validationResult.data.data.holdings)).toBe(true);
       expect(validationResult.data.data.summary).toBeDefined();
     }
   });
 
   it('returns 401 UNAUTHORIZED without auth token', async () => {
-    const response = await fetch(`${BASE_URL}/api/portfolios/${mockPortfolioId}`);
+    const response = await fetch(`${BASE_URL}/api/portfolios/${portfolioId}`);
 
     expect(response.status).toBe(401);
   });
 
   it('returns 403 FORBIDDEN for portfolio not owned by user', async () => {
-    const otherUserPortfolioId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+    const { token: otherToken } = await createTestUser('otheruser');
     
-    const response = await fetch(`${BASE_URL}/api/portfolios/${otherUserPortfolioId}`, {
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-      },
+    const response = await fetch(`${BASE_URL}/api/portfolios/${portfolioId}`, {
+      headers: createAuthHeaders(otherToken),
     });
 
     expect([403, 404]).toContain(response.status);
@@ -78,19 +89,15 @@ describe('GET /api/portfolios/:id', () => {
     const fakePortfolioId = '00000000-0000-0000-0000-000000000000';
     
     const response = await fetch(`${BASE_URL}/api/portfolios/${fakePortfolioId}`, {
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-      },
+      headers: createAuthHeaders(authToken),
     });
 
     expect(response.status).toBe(404);
   });
 
   it('calculates holdings from transactions correctly', async () => {
-    const response = await fetch(`${BASE_URL}/api/portfolios/${mockPortfolioId}`, {
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-      },
+    const response = await fetch(`${BASE_URL}/api/portfolios/${portfolioId}`, {
+      headers: createAuthHeaders(authToken),
     });
 
     if (response.ok) {
