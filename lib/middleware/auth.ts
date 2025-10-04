@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAuthenticatedClient } from '../lib/supabase';
+import { createAuthenticatedClient } from '@/lib/supabase';
 
 /**
  * Authentication middleware for API routes

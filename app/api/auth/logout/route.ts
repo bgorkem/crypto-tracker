@@ -6,7 +6,7 @@
  */
 
 import { NextRequest } from 'next/server'
-import { validateAuth } from '@/middleware/auth'
+import { validateAuth } from '@/lib/middleware/auth'
 import { noContentResponse, unauthorizedResponse, badRequestResponse, internalErrorResponse } from '@/lib/api-response'
 import { createAuthenticatedClient } from '@/lib/supabase'
 
