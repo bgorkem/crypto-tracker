@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { z } from 'zod';
+import { createTestUser, createAuthHeaders, getBaseUrl } from '../helpers/auth-helpers';
 
 const TransactionSchema = z.object({
   id: z.string().uuid(),
@@ -8,10 +9,10 @@ const TransactionSchema = z.object({
   type: z.enum(['BUY', 'SELL']),
   quantity: z.number().positive(),
   price_per_unit: z.number().positive(),
-  transaction_date: z.string().datetime(),
+  transaction_date: z.string(),
   notes: z.string().nullable(),
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime(),
+  created_at: z.string(),
+  updated_at: z.string(),
 });
 
 const TransactionListResponseSchema = z.object({
@@ -25,15 +26,27 @@ const TransactionListResponseSchema = z.object({
 });
 
 describe('GET /api/portfolios/:id/transactions', () => {
-  const BASE_URL = 'http://localhost:3000';
-  const authToken = 'mock-token';
-  const mockPortfolioId = 'c7f0e9a2-8b3d-4f1e-a2c5-1d9e8f7b6a5c';
+  const BASE_URL = getBaseUrl();
+  let authToken: string;
+  let portfolioId: string;
+
+  beforeAll(async () => {
+    const { token } = await createTestUser('transactionlist');
+    authToken = token;
+    
+    // Create a portfolio for testing
+    const createResponse = await fetch(`${BASE_URL}/api/portfolios`, {
+      method: 'POST',
+      headers: createAuthHeaders(authToken, { 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ name: 'Transaction Test Portfolio' }),
+    });
+    const createData = await createResponse.json();
+    portfolioId = createData.data.id;
+  });
 
   it('returns 200 with paginated transactions', async () => {
-    const response = await fetch(`${BASE_URL}/api/portfolios/${mockPortfolioId}/transactions`, {
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-      },
+    const response = await fetch(`${BASE_URL}/api/portfolios/${portfolioId}/transactions`, {
+      headers: createAuthHeaders(authToken),
     });
 
     expect(response.status).toBe(200);
@@ -52,11 +65,9 @@ describe('GET /api/portfolios/:id/transactions', () => {
 
   it('supports pagination with page and limit query params', async () => {
     const response = await fetch(
-      `${BASE_URL}/api/portfolios/${mockPortfolioId}/transactions?page=2&limit=50`,
+      `${BASE_URL}/api/portfolios/${portfolioId}/transactions?page=2&limit=50`,
       {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-        },
+        headers: createAuthHeaders(authToken),
       }
     );
 
@@ -73,11 +84,9 @@ describe('GET /api/portfolios/:id/transactions', () => {
 
   it('filters by symbol when provided', async () => {
     const response = await fetch(
-      `${BASE_URL}/api/portfolios/${mockPortfolioId}/transactions?symbol=BTC`,
+      `${BASE_URL}/api/portfolios/${portfolioId}/transactions?symbol=BTC`,
       {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-        },
+        headers: createAuthHeaders(authToken),
       }
     );
 
@@ -94,11 +103,9 @@ describe('GET /api/portfolios/:id/transactions', () => {
 
   it('filters by type (BUY or SELL) when provided', async () => {
     const response = await fetch(
-      `${BASE_URL}/api/portfolios/${mockPortfolioId}/transactions?type=BUY`,
+      `${BASE_URL}/api/portfolios/${portfolioId}/transactions?type=BUY`,
       {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-        },
+        headers: createAuthHeaders(authToken),
       }
     );
 
@@ -114,10 +121,8 @@ describe('GET /api/portfolios/:id/transactions', () => {
   });
 
   it('returns transactions in reverse chronological order by default', async () => {
-    const response = await fetch(`${BASE_URL}/api/portfolios/${mockPortfolioId}/transactions`, {
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-      },
+    const response = await fetch(`${BASE_URL}/api/portfolios/${portfolioId}/transactions`, {
+      headers: createAuthHeaders(authToken),
     });
 
     if (response.ok) {
@@ -133,7 +138,7 @@ describe('GET /api/portfolios/:id/transactions', () => {
   });
 
   it('returns 401 UNAUTHORIZED without auth token', async () => {
-    const response = await fetch(`${BASE_URL}/api/portfolios/${mockPortfolioId}/transactions`);
+    const response = await fetch(`${BASE_URL}/api/portfolios/${portfolioId}/transactions`);
 
     expect(response.status).toBe(401);
   });
