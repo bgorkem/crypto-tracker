@@ -69,11 +69,31 @@ A runtime warning is logged if `TEST_MODE=true` in production:
 
 ### Running Tests
 
-Tests automatically use `TEST_MODE=true` (configured in `.env.local`):
+**Contract/Integration tests require a running server with `TEST_MODE=true`:**
 
-```bash
-# All contract tests use real Supabase instance
-npm test -- __tests__/contract/auth.register.test.ts
+1. **Start the dev server** (loads `.env.local`):
+   ```bash
+   npm run dev
+   # Server starts with TEST_MODE=true from .env.local
+   ```
+
+2. **Run tests** (in a separate terminal):
+   ```bash
+   # Tests make HTTP requests to localhost:3000
+   npm test -- __tests__/contract/auth.register.test.ts
+   ```
+
+**Why this approach?**
+- Contract tests verify the **full HTTP API** (not just code)
+- Server must be running separately from test runner
+- `.env.local` configures the dev server with `TEST_MODE=true`
+- Production deployment ignores `.env.local` and uses `TEST_MODE=false`
+
+**Environment file hierarchy:**
+```
+.env.local          → Local development (TEST_MODE=true)
+.env.example        → Template (TEST_MODE=false)
+Production env vars → Deployed app (TEST_MODE=false or omitted)
 ```
 
 Tests use unique email addresses (timestamp-based) to avoid conflicts:
