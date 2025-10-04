@@ -20,6 +20,12 @@ export const RegisterSchema = z.object({
     .string()
     .min(8, 'Password must be at least 8 characters')
     .max(128, 'Password must be less than 128 characters'),
+  displayName: z
+    .string()
+    .max(100, 'Display name must be less than 100 characters')
+    .trim()
+    .optional()
+    .nullable(),
 });
 
 export const LoginSchema = z.object({

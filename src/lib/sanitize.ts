@@ -40,6 +40,15 @@ export function sanitizeText(input: string): string {
 }
 
 /**
+ * Sanitize generic user input (alias for sanitizeText)
+ * @param input - Untrusted input string
+ * @returns Sanitized string
+ */
+export function sanitizeInput(input: string): string {
+  return sanitizeText(input);
+}
+
+/**
  * Sanitize portfolio name
  * @param name - Portfolio name input
  * @returns Sanitized name (max 100 chars)
