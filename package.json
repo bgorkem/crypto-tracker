@@ -1,0 +1,50 @@
+{
+  "name": "crypto-tracker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "vitest",
+    "test:unit": "vitest run --coverage",
+    "test:watch": "vitest watch",
+    "test:e2e": "playwright test",
+    "test:coverage": "vitest run --coverage",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/auth-helpers-nextjs": "^0.8.7",
+    "@supabase/supabase-js": "^2.39.0",
+    "@tanstack/react-query": "^5.17.0",
+    "isomorphic-dompurify": "^2.9.0",
+    "next": "^15.5.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "recharts": "^2.10.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.8.0",
+    "@playwright/test": "^1.40.0",
+    "@tailwindcss/postcss": "^4.1.14",
+    "@testing-library/jest-dom": "^6.1.0",
+    "@testing-library/react": "^15.0.0",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^4.2.0",
+    "@vitest/ui": "^1.1.0",
+    "autoprefixer": "^10.0.1",
+    "eslint": "^8",
+    "eslint-config-next": "^15.5.0",
+    "jsdom": "^23.0.0",
+    "msw": "^2.0.0",
+    "postcss": "^8",
+    "supabase": "^1.127.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5",
+    "vitest": "^1.1.0"
+  }
+}
