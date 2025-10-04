@@ -271,6 +271,7 @@ List transactions for portfolio with pagination.
         "quantity": 0.5,
         "price": 28000.00,
         "executed_at": "2025-10-01T10:30:00Z",
+        "notes": "Initial purchase",
         "created_at": "2025-10-01T10:31:00Z",
         "updated_at": "2025-10-01T10:31:00Z"
       }
@@ -301,7 +302,8 @@ Create new transaction.
   "side": "BUY",
   "quantity": 0.5,
   "price": 28000.00,
-  "executed_at": "2025-10-01T10:30:00Z"
+  "executed_at": "2025-10-01T10:30:00Z",
+  "notes": "Initial purchase from Coinbase"
 }
 ```
 
@@ -316,6 +318,7 @@ Create new transaction.
     "quantity": 0.5,
     "price": 28000.00,
     "executed_at": "2025-10-01T10:30:00Z",
+    "notes": "Initial purchase from Coinbase",
     "created_at": "2025-10-04T12:00:00Z",
     "updated_at": "2025-10-04T12:00:00Z"
   }
@@ -326,6 +329,7 @@ Create new transaction.
 - `400 INVALID_SYMBOL`: Symbol not in supported list
 - `400 INVALID_QUANTITY`: Quantity <= 0
 - `400 INVALID_PRICE`: Price <= 0
+- `400 INVALID_NOTES`: Notes exceed 1000 characters
 - `400 FUTURE_DATE`: executed_at is in the future
 - `400 INSUFFICIENT_HOLDINGS`: SELL quantity > current holdings
 - `401 UNAUTHORIZED`: Missing or invalid token
@@ -342,7 +346,8 @@ Update transaction (unrestricted edit window per clarifications).
 {
   "quantity": 0.6,
   "price": 29000.00,
-  "executed_at": "2025-10-01T11:00:00Z"
+  "executed_at": "2025-10-01T11:00:00Z",
+  "notes": "Updated quantity and price"
 }
 ```
 
@@ -377,14 +382,16 @@ Bulk import transactions.
       "side": "BUY",
       "quantity": 0.5,
       "price": 28000.00,
-      "executed_at": "2025-10-01T10:30:00Z"
+      "executed_at": "2025-10-01T10:30:00Z",
+      "notes": "Initial purchase"
     },
     {
       "symbol": "ETH",
       "side": "BUY",
       "quantity": 10.0,
       "price": 1800.00,
-      "executed_at": "2025-10-01T11:00:00Z"
+      "executed_at": "2025-10-01T11:00:00Z",
+      "notes": "Diversification trade"
     }
   ]
 }

@@ -69,6 +69,7 @@ CREATE POLICY "Users can CRUD own portfolios"
 | quantity | numeric(20,8) | NOT NULL, CHECK(quantity > 0) | Asset quantity |
 | price | numeric(20,8) | NOT NULL, CHECK(price > 0) | Execution price per unit (USD) |
 | executed_at | timestamptz | NOT NULL, CHECK(executed_at <= NOW()) | Transaction execution time |
+| notes | text | NULL | Optional free-text notes about the transaction |
 | created_at | timestamptz | NOT NULL, default NOW() | Record creation timestamp |
 | updated_at | timestamptz | NOT NULL, default NOW() | Last edit timestamp |
 
@@ -87,6 +88,7 @@ CREATE POLICY "Users can CRUD own transactions"
 
 **Validation Rules**:
 - **FR-004**: symbol, quantity > 0, price > 0, executed_at <= NOW()
+- **notes**: optional, max 1000 characters (application-level validation)
 - **FR-005**: SELL quantity validation (application-level: check total holdings before insert)
 - **FR-006**: All fields editable except id, created_at (updated_at auto-bumped on UPDATE trigger)
 - **FR-019**: Pagination at 100 transactions via cursor-based query
@@ -320,6 +322,7 @@ CREATE TABLE transactions (
   quantity numeric(20,8) NOT NULL CHECK(quantity > 0),
   price numeric(20,8) NOT NULL CHECK(price > 0),
   executed_at timestamptz NOT NULL CHECK(executed_at <= NOW()),
+  notes text,
   created_at timestamptz NOT NULL DEFAULT NOW(),
   updated_at timestamptz NOT NULL DEFAULT NOW()
 );
@@ -464,6 +467,7 @@ export type Database = {
           quantity: number;
           price: number;
           executed_at: string;
+          notes: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -475,6 +479,7 @@ export type Database = {
           quantity: number;
           price: number;
           executed_at: string;
+          notes?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -486,6 +491,7 @@ export type Database = {
           quantity?: number;
           price?: number;
           executed_at?: string;
+          notes?: string | null;
           created_at?: string;
           updated_at?: string;
         };
