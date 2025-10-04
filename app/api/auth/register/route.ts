@@ -28,18 +28,44 @@ export async function POST(request: NextRequest) {
     // Sanitize display name to prevent XSS
     const sanitizedDisplayName = displayName ? sanitizeInput(displayName) : null
 
-    // Use admin client for registration (bypasses email confirmation)
-    const adminClient = createAdminClient()
+    // SECURITY: Only use admin client in test mode to bypass email confirmation
+    // In production, this will use normal signup flow with email confirmation
+    const isTestMode = process.env.TEST_MODE === 'true'
+    
+    if (isTestMode && process.env.NODE_ENV === 'production') {
+      console.warn('⚠️  WARNING: TEST_MODE is enabled in production! This is a security risk.')
+    }
+    
+    let authData;
+    let authError;
 
-    // Register user with Supabase Auth
-    const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true, // Auto-confirm email for development
-      user_metadata: {
-        display_name: sanitizedDisplayName
-      }
-    })
+    if (isTestMode) {
+      // TEST MODE: Use admin client to bypass email confirmation for integration tests
+      const adminClient = createAdminClient()
+      const result = await adminClient.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          display_name: sanitizedDisplayName
+        }
+      })
+      authData = result.data
+      authError = result.error
+    } else {
+      // PRODUCTION: Normal signup flow with email confirmation
+      const result = await anonClient.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            display_name: sanitizedDisplayName
+          }
+        }
+      })
+      authData = result.data
+      authError = result.error
+    }
 
     if (authError) {
       // Check if user already exists (duplicate email)
@@ -58,7 +84,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Create user profile in our database
-    const { error: profileError } = await adminClient
+    // Use admin client for database operations (RLS policies allow admin access)
+    const supabaseClient = isTestMode ? createAdminClient() : anonClient
+    const { error: profileError } = await supabaseClient
       .from('user_profiles')
       .insert({
         id: authData.user.id,
