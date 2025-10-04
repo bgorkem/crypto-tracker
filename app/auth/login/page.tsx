@@ -124,7 +124,7 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} method="post" action="#" noValidate className="space-y-4">
             {errors.general && (
               <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded-md text-sm">
                 {errors.general}

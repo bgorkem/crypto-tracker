@@ -37,7 +37,7 @@ test.describe('Authentication Flow E2E', () => {
     await page.click('button[type="submit"]');
     
     // With TEST_MODE=true, should redirect directly to dashboard
-    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
+    await expect(page).toHaveURL(/\/dashboard/);
     
     // Should see dashboard content
     await expect(page.getByRole('heading', { name: /my portfolios/i })).toBeVisible();
@@ -54,23 +54,29 @@ test.describe('Authentication Flow E2E', () => {
     await page.click('button[type="submit"]');
     
     // Wait for redirect to dashboard (registration successful)
-    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
+    await expect(page).toHaveURL(/\/dashboard/);
     
     // Now logout
     await page.click('button:has-text("Logout")');
     
     // Should redirect to login page
-    await expect(page).toHaveURL(/\/auth\/login/, { timeout: 10000 });
+    await expect(page).toHaveURL(/\/auth\/login/);
+    
+    // Wait for page to be fully loaded
+    await page.waitForLoadState('networkidle');
     
     // Fill login form
     await page.fill('input[name="email"]', testEmail);
     await page.fill('input[name="password"]', password);
     
+    // Wait a moment for React to be ready
+    await page.waitForTimeout(500);
+    
     // Submit login
     await page.click('button[type="submit"]');
     
     // Should redirect to dashboard
-    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
+    await expect(page).toHaveURL(/\/dashboard/);
     
     // Should see dashboard content
     await expect(page.getByRole('heading', { name: /my portfolios/i })).toBeVisible();
@@ -99,13 +105,13 @@ test.describe('Authentication Flow E2E', () => {
     await page.fill('input[name="confirmPassword"]', password);
     await page.click('button[type="submit"]');
     
-    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
+    await expect(page).toHaveURL(/\/dashboard/);
     
     // Click logout
     await page.click('button:has-text("Logout")');
     
     // Should redirect to login page
-    await expect(page).toHaveURL(/\/auth\/login/, { timeout: 10000 });
+    await expect(page).toHaveURL(/\/auth\/login/);
     
     // Try to access protected route should redirect back to login
     await page.goto('/dashboard');
@@ -123,10 +129,14 @@ test.describe('Authentication Flow E2E', () => {
     await page.fill('input[name="email"]', 'invalid-email');
     await page.fill('input[name="password"]', 'short');
     await page.fill('input[name="confirmPassword"]', 'short');
+    
+    // Wait for page to be fully loaded before clicking submit
+    await page.waitForLoadState('networkidle');
+    
     await page.click('button[type="submit"]');
     
-    // Should show validation errors
-    await expect(page.locator('text=/invalid.*email/i')).toBeVisible({ timeout: 5000 });
+    // Should show validation errors - look for the specific error text
+    await expect(page.locator('p.text-destructive', { hasText: /invalid.*email/i })).toBeVisible();
   });
 
   test('shows error for password mismatch', async ({ page }) => {
@@ -138,7 +148,7 @@ test.describe('Authentication Flow E2E', () => {
     await page.click('button[type="submit"]');
     
     // Should show password mismatch error
-    await expect(page.locator('text=/passwords.*not match/i')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=/passwords.*not match/i')).toBeVisible();
   });
 
   test('shows error for invalid login credentials', async ({ page }) => {
@@ -149,7 +159,7 @@ test.describe('Authentication Flow E2E', () => {
     await page.click('button[type="submit"]');
     
     // Should show invalid credentials error
-    await expect(page.locator('text=/invalid.*email.*password/i')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=/invalid.*email.*password/i')).toBeVisible();
   });
 });
 
