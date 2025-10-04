@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAuthenticatedClient } from '@/lib/supabase';
+import { sanitizeInput } from '@/lib/sanitize';
 
 /**
  * GET /api/portfolios
@@ -186,8 +187,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name, description } = body;
 
+    // Sanitize inputs
+    const sanitizedName = sanitizeInput(name);
+    const sanitizedDescription = description ? sanitizeInput(description) : null;
+
     // Validate name
-    const nameValidation = validatePortfolioName(name);
+    const nameValidation = validatePortfolioName(sanitizedName);
     if (!nameValidation.valid) {
       return NextResponse.json(
         { error: nameValidation.error },
@@ -200,8 +205,8 @@ export async function POST(request: NextRequest) {
       .from('portfolios')
       .insert({
         user_id: user.id,
-        name: (name as string).trim(),
-        description: description || null,
+        name: (sanitizedName as string).trim(),
+        description: sanitizedDescription,
         base_currency: 'USD', // Default currency
       })
       .select()

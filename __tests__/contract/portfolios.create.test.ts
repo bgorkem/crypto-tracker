@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { z } from 'zod';
 
 const PortfolioResponseSchema = z.object({
@@ -7,8 +7,8 @@ const PortfolioResponseSchema = z.object({
     name: z.string(),
     description: z.string().nullable(),
     base_currency: z.string(),
-    created_at: z.string().datetime(),
-    updated_at: z.string().datetime(),
+    created_at: z.string(), // Postgres timestamp with timezone
+    updated_at: z.string(), // Postgres timestamp with timezone
   }),
 });
 
@@ -22,7 +22,22 @@ const ErrorResponseSchema = z.object({
 
 describe('POST /api/portfolios', () => {
   const BASE_URL = 'http://localhost:3000';
-  const authToken = 'mock-token';
+  let authToken: string;
+
+  beforeAll(async () => {
+    // Create and login a test user
+    const testEmail = `portfoliocreate-${Date.now()}@testuser.com`;
+    const password = 'TestPassword123!';
+
+    const registerResponse = await fetch(`${BASE_URL}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: testEmail, password }),
+    });
+
+    const registerData = await registerResponse.json();
+    authToken = registerData.data.session.access_token;
+  });
 
   it('returns 201 with created portfolio on valid request', async () => {
     const requestData = {
@@ -43,6 +58,12 @@ describe('POST /api/portfolios', () => {
     
     const data = await response.json();
     const validationResult = PortfolioResponseSchema.safeParse(data);
+    
+    if (!validationResult.success) {
+      console.log('Validation failed:', validationResult.error);
+      console.log('Received data:', JSON.stringify(data, null, 2));
+    }
+    
     expect(validationResult.success).toBe(true);
     
     if (validationResult.success) {

@@ -8,8 +8,8 @@ const PortfolioSchema = z.object({
   base_currency: z.string(),
   total_value: z.number().nullable(),
   unrealized_pl: z.number().nullable(),
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime(),
+  created_at: z.string(), // Postgres timestamp with timezone
+  updated_at: z.string(), // Postgres timestamp with timezone
 });
 
 const PortfoliosListResponseSchema = z.object({
