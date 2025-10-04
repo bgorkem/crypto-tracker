@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { z } from 'zod';
+import { createTestUser, createAuthHeaders, getBaseUrl } from '../helpers/auth-helpers';
 
 const PortfolioResponseSchema = z.object({
   data: z.object({
@@ -7,15 +8,29 @@ const PortfolioResponseSchema = z.object({
     name: z.string(),
     description: z.string().nullable(),
     base_currency: z.string(),
-    created_at: z.string().datetime(),
-    updated_at: z.string().datetime(),
+    created_at: z.string(),
+    updated_at: z.string(),
   }),
 });
 
 describe('PATCH /api/portfolios/:id', () => {
-  const BASE_URL = 'http://localhost:3000';
-  const authToken = 'mock-token';
-  const mockPortfolioId = 'c7f0e9a2-8b3d-4f1e-a2c5-1d9e8f7b6a5c';
+  const BASE_URL = getBaseUrl();
+  let authToken: string;
+  let portfolioId: string;
+
+  beforeAll(async () => {
+    const { token } = await createTestUser('portfolioupdate');
+    authToken = token;
+    
+    // Create a portfolio for testing
+    const createResponse = await fetch(`${BASE_URL}/api/portfolios`, {
+      method: 'POST',
+      headers: createAuthHeaders(authToken, { 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ name: 'Test Portfolio' }),
+    });
+    const createData = await createResponse.json();
+    portfolioId = createData.data.id;
+  });
 
   it('returns 200 with updated portfolio', async () => {
     const updateData = {
@@ -23,12 +38,9 @@ describe('PATCH /api/portfolios/:id', () => {
       description: 'Updated description',
     };
 
-    const response = await fetch(`${BASE_URL}/api/portfolios/${mockPortfolioId}`, {
+    const response = await fetch(`${BASE_URL}/api/portfolios/${portfolioId}`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-      },
+      headers: createAuthHeaders(authToken, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(updateData),
     });
 
@@ -45,15 +57,12 @@ describe('PATCH /api/portfolios/:id', () => {
   });
 
   it('returns 403 FORBIDDEN for portfolio not owned by user', async () => {
-    const otherUserPortfolioId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+    const { token: otherToken } = await createTestUser('otheruser2');
     const updateData = { name: 'Hacked Name' };
 
-    const response = await fetch(`${BASE_URL}/api/portfolios/${otherUserPortfolioId}`, {
+    const response = await fetch(`${BASE_URL}/api/portfolios/${portfolioId}`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-      },
+      headers: createAuthHeaders(otherToken, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(updateData),
     });
 
@@ -66,10 +75,7 @@ describe('PATCH /api/portfolios/:id', () => {
 
     const response = await fetch(`${BASE_URL}/api/portfolios/${fakePortfolioId}`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-      },
+      headers: createAuthHeaders(authToken, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(updateData),
     });
 
@@ -78,48 +84,63 @@ describe('PATCH /api/portfolios/:id', () => {
 });
 
 describe('DELETE /api/portfolios/:id', () => {
-  const BASE_URL = 'http://localhost:3000';
-  const authToken = 'mock-token';
-  const mockPortfolioId = 'c7f0e9a2-8b3d-4f1e-a2c5-1d9e8f7b6a5c';
+  const BASE_URL = getBaseUrl();
+  let authToken: string;
+  let portfolioId: string;
+
+  beforeAll(async () => {
+    const { token } = await createTestUser('portfoliodelete');
+    authToken = token;
+    
+    // Create a portfolio for testing
+    const createResponse = await fetch(`${BASE_URL}/api/portfolios`, {
+      method: 'POST',
+      headers: createAuthHeaders(authToken, { 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ name: 'Test Portfolio for Deletion' }),
+    });
+    const createData = await createResponse.json();
+    portfolioId = createData.data.id;
+  });
 
   it('returns 204 No Content on successful deletion', async () => {
-    const response = await fetch(`${BASE_URL}/api/portfolios/${mockPortfolioId}`, {
+    const response = await fetch(`${BASE_URL}/api/portfolios/${portfolioId}`, {
       method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-      },
+      headers: createAuthHeaders(authToken),
     });
 
     expect(response.status).toBe(204);
   });
 
   it('cascades deletion to transactions', async () => {
+    // Create a new portfolio to delete
+    const createResponse = await fetch(`${BASE_URL}/api/portfolios`, {
+      method: 'POST',
+      headers: createAuthHeaders(authToken, { 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ name: 'Portfolio to Delete' }),
+    });
+    const createData = await createResponse.json();
+    const tempPortfolioId = createData.data.id;
+
     // Delete portfolio
-    await fetch(`${BASE_URL}/api/portfolios/${mockPortfolioId}`, {
+    await fetch(`${BASE_URL}/api/portfolios/${tempPortfolioId}`, {
       method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-      },
+      headers: createAuthHeaders(authToken),
     });
 
     // Try to access transactions of deleted portfolio
-    const txnResponse = await fetch(`${BASE_URL}/api/portfolios/${mockPortfolioId}/transactions`, {
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-      },
+    const txnResponse = await fetch(`${BASE_URL}/api/portfolios/${tempPortfolioId}/transactions`, {
+      headers: createAuthHeaders(authToken),
     });
 
     expect(txnResponse.status).toBe(404);
   });
 
   it('returns 403 FORBIDDEN for portfolio not owned by user', async () => {
-    const otherUserPortfolioId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+    const { token: otherToken } = await createTestUser('otheruser3');
 
-    const response = await fetch(`${BASE_URL}/api/portfolios/${otherUserPortfolioId}`, {
+    const response = await fetch(`${BASE_URL}/api/portfolios/${portfolioId}`, {
       method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-      },
+      headers: createAuthHeaders(otherToken),
     });
 
     expect([403, 404]).toContain(response.status);
@@ -130,9 +151,7 @@ describe('DELETE /api/portfolios/:id', () => {
 
     const response = await fetch(`${BASE_URL}/api/portfolios/${fakePortfolioId}`, {
       method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-      },
+      headers: createAuthHeaders(authToken),
     });
 
     expect(response.status).toBe(404);

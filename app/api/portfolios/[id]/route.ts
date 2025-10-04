@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAuthenticatedClient } from '@/lib/supabase';
+import { sanitizeInput } from '@/lib/sanitize';
 
 interface Transaction {
   symbol: string;
@@ -8,6 +9,62 @@ interface Transaction {
   price_per_unit: number;
   portfolio_id: string;
   executed_at: string;
+}
+
+async function authenticateAndCheckOwnership(
+  token: string | undefined,
+  portfolioId: string
+): Promise<{ user: { id: string } | null; error?: NextResponse }> {
+  if (!token) {
+    return {
+      user: null,
+      error: NextResponse.json(
+        { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
+        { status: 401 }
+      ),
+    };
+  }
+
+  const supabase = createAuthenticatedClient(token);
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return {
+      user: null,
+      error: NextResponse.json(
+        { error: { code: 'UNAUTHORIZED', message: 'Invalid or expired token' } },
+        { status: 401 }
+      ),
+    };
+  }
+
+  const { data: portfolio, error: portfolioError } = await supabase
+    .from('portfolios')
+    .select('user_id')
+    .eq('id', portfolioId)
+    .single();
+
+  if (portfolioError || !portfolio) {
+    return {
+      user: null,
+      error: NextResponse.json(
+        { error: { code: 'NOT_FOUND', message: 'Portfolio not found' } },
+        { status: 404 }
+      ),
+    };
+  }
+
+  if (portfolio.user_id !== user.id) {
+    return {
+      user: null,
+      error: NextResponse.json(
+        { error: { code: 'FORBIDDEN', message: 'Access denied to this portfolio' } },
+        { status: 403 }
+      ),
+    };
+  }
+
+  return { user };
 }
 
 export async function GET(
@@ -121,4 +178,87 @@ export async function GET(
       },
     },
   });
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const authHeader = request.headers.get('authorization');
+  const token = authHeader?.replace('Bearer ', '');
+
+  const { error } = await authenticateAndCheckOwnership(token, id);
+  if (error) return error;
+
+  // Get and validate request body
+  const body = await request.json();
+  const updateData: { name?: string; description?: string | null } = {};
+
+  if (body.name !== undefined) {
+    const sanitizedName = sanitizeInput(body.name);
+    if (!sanitizedName || sanitizedName.trim().length === 0) {
+      return NextResponse.json(
+        { error: { code: 'INVALID_NAME', message: 'Portfolio name cannot be empty' } },
+        { status: 400 }
+      );
+    }
+    if (sanitizedName.length > 100) {
+      return NextResponse.json(
+        { error: { code: 'NAME_TOO_LONG', message: 'Portfolio name must be 100 characters or less' } },
+        { status: 400 }
+      );
+    }
+    updateData.name = sanitizedName;
+  }
+
+  if (body.description !== undefined) {
+    updateData.description = body.description ? sanitizeInput(body.description) : null;
+  }
+
+  // Update portfolio
+  const supabase = createAuthenticatedClient(token!);
+  const { data: updated, error: updateError } = await supabase
+    .from('portfolios')
+    .update(updateData)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (updateError) {
+    return NextResponse.json(
+      { error: { code: 'UPDATE_FAILED', message: 'Failed to update portfolio' } },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ data: updated });
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const authHeader = request.headers.get('authorization');
+  const token = authHeader?.replace('Bearer ', '');
+
+  const { error } = await authenticateAndCheckOwnership(token, id);
+  if (error) return error;
+
+  // Delete portfolio (transactions cascade automatically)
+  const supabase = createAuthenticatedClient(token!);
+  const { error: deleteError } = await supabase
+    .from('portfolios')
+    .delete()
+    .eq('id', id);
+
+  if (deleteError) {
+    return NextResponse.json(
+      { error: { code: 'DELETE_FAILED', message: 'Failed to delete portfolio' } },
+      { status: 500 }
+    );
+  }
+
+  return new NextResponse(null, { status: 204 });
 }
