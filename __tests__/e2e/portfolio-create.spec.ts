@@ -72,20 +72,16 @@ test.describe('Portfolio Management E2E', () => {
     // Wait a bit for dialog animation to complete
     await page.waitForTimeout(500);
     
-    // Click on the portfolio card to view details
+   // Click on the portfolio card to view details
     await page.click('text=Test Portfolio');
     
     // Should navigate to portfolio detail page  
     await page.waitForURL(/\/portfolio\/[^/]+/, { timeout: 10000 });
-    
-    // Debug: Take a screenshot and log page content
-    console.log('Current URL:', page.url());
-    const bodyText = await page.locator('body').textContent();
-    console.log('Page content:', bodyText?.substring(0, 500));
-    
+
+        
     // Wait for page to load and show portfolio name
     await expect(page.locator('h2:has-text("Test Portfolio")')).toBeVisible({ timeout: 10000 });
-    
+
     // Should see "Add Transaction" button
     await expect(page.locator('button:has-text("Add Transaction")')).toBeVisible({ timeout: 10000 });
     

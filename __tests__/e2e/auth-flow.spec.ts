@@ -142,7 +142,7 @@ test.describe('Authentication Flow E2E', () => {
   test('shows error for password mismatch', async ({ page }) => {
     await page.goto('/auth/register');
     
-    await page.fill('input[name="email"]', 'test@example.com');
+    await page.fill('input[name="email"]', 'test@testuser.com');
     await page.fill('input[name="password"]', 'Password123!');
     await page.fill('input[name="confirmPassword"]', 'DifferentPassword123!');
     await page.click('button[type="submit"]');
@@ -154,7 +154,7 @@ test.describe('Authentication Flow E2E', () => {
   test('shows error for invalid login credentials', async ({ page }) => {
     await page.goto('/auth/login');
     
-    await page.fill('input[name="email"]', 'nonexistent@example.com');
+    await page.fill('input[name="email"]', 'nonexistent@testuser.com');
     await page.fill('input[name="password"]', 'WrongPassword123!');
     await page.click('button[type="submit"]');
     

@@ -1,11 +1,15 @@
-import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import { createClient as createSupabaseClient, SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from './types/database.generated.types';
 
+let supabaseInstance: SupabaseClient | null = null
 /**
  * Create a Supabase client for browser/client-side use
  * This handles session storage automatically via localStorage
  */
 export function createClient() {
+
+  if (supabaseInstance) return supabaseInstance;
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -15,7 +19,7 @@ export function createClient() {
     );
   }
 
-  return createSupabaseClient<Database>(supabaseUrl, supabaseAnonKey, {
+  supabaseInstance= createSupabaseClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: true, // Enable session persistence in browser
       autoRefreshToken: true,
@@ -23,5 +27,6 @@ export function createClient() {
       storage: typeof window !== 'undefined' ? window.localStorage : undefined,
     },
   });
+  return supabaseInstance;
 }
 

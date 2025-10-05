@@ -682,7 +682,7 @@ export const TransactionCreateSchema = z.object({
 **Action**: Create demo user, portfolio, and 5 sample transactions per quickstart.md
 ```sql
 -- Insert demo user (handled by Supabase Auth)
--- Use Supabase dashboard to create: demo@example.com / DemoPassword123!
+-- Use Supabase dashboard to create: demo@testuser.com / DemoPassword123!
 
 -- Insert demo portfolio (replace user_id with actual auth.users.id)
 INSERT INTO portfolios (user_id, name, description)
@@ -711,7 +711,7 @@ export const handlers = [
   http.post('/api/auth/register', () => {
     return HttpResponse.json({
       data: {
-        user: { id: 'mock-user-id', email: 'test@example.com', created_at: new Date().toISOString() },
+        user: { id: 'mock-user-id', email: 'test@testuser.com', created_at: new Date().toISOString() },
         session: { access_token: 'mock-token', refresh_token: 'mock-refresh', expires_at: Date.now() + 3600000 }
       }
     }, { status: 201 });

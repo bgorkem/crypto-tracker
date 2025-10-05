@@ -104,7 +104,7 @@ describe('POST /api/auth/register', () => {
   it('returns 201 with user and session on valid request', async () => {
     const response = await fetch('/api/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email: 'test@example.com', password: 'Password123!' })
+      body: JSON.stringify({ email: 'test@testuser.com', password: 'Password123!' })
     });
     expect(response.status).toBe(201);
     const data = await response.json();
@@ -220,7 +220,7 @@ We use:
 // ✅ E2E test (realistic, no mocking)
 test('login with existing credentials', async ({ page }) => {
   await page.goto('/auth/login');
-  await page.fill('input[name="email"]', 'test@example.com');
+  await page.fill('input[name="email"]', 'test@testuser.com');
   await page.fill('input[name="password"]', 'Password123!');
   await page.click('button[type="submit"]');
   await expect(page).toHaveURL(/\/dashboard/); // Real navigation!

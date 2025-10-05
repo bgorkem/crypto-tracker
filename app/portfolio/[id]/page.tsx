@@ -62,7 +62,7 @@ export default function PortfolioDetailPage() {
       });
       if (portfolioRes.ok) {
         const data = await portfolioRes.json();
-        setPortfolio(data.data);
+        setPortfolio(data.data.portfolio);
       }
 
       // Fetch transactions  

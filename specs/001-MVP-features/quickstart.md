@@ -91,7 +91,7 @@ npx supabase db seed
 ```
 
 **Sample Credentials** (after seeding):
-- Email: `demo@example.com`
+- Email: `demo@testuser.com`
 - Password: `DemoPassword123!`
 
 ---

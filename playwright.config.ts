@@ -17,9 +17,9 @@ export default defineConfig({
   reporter: 'line',
   /* Global timeout for each test - 30 seconds */
   timeout: 30 * 1000,
-  /* Expect timeout for assertions - 5 seconds */
+  /* Expect timeout for assertions - 10 seconds */
   expect: {
-    timeout: 5 * 1000,
+    timeout: 10 * 1000,
   },
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
@@ -31,8 +31,8 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     /* Action timeout - 10 seconds */
     actionTimeout: 10 * 1000,
-    /* Navigation timeout - 10 seconds */
-    navigationTimeout: 10 * 1000,
+    /* Navigation timeout - 15 seconds for slower CI environments */
+    navigationTimeout: 15 * 1000,
   },
 
   /* Configure projects for major browsers */

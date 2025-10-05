@@ -21,7 +21,7 @@ describe('Price Updates Integration', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: `test-${Date.now()}@example.com`,
+        email: `test-${Date.now()}@testuser.com`,
         password: 'SecureP@ss123',
       }),
     });

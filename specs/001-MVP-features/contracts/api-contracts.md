@@ -30,7 +30,7 @@ Register new user with email/password.
 **Request**:
 ```json
 {
-  "email": "user@example.com",
+  "email": "user@testuser.com",
   "password": "securePassword123"
 }
 ```
@@ -41,7 +41,7 @@ Register new user with email/password.
   "data": {
     "user": {
       "id": "uuid",
-      "email": "user@example.com",
+      "email": "user@testuser.com",
       "created_at": "2025-10-04T12:00:00Z"
     },
     "session": {
@@ -66,7 +66,7 @@ Login with email/password.
 **Request**:
 ```json
 {
-  "email": "user@example.com",
+  "email": "user@testuser.com",
   "password": "securePassword123"
 }
 ```

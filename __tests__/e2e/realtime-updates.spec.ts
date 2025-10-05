@@ -12,7 +12,7 @@ import { test, expect } from '@playwright/test';
  */
 
 test.describe('Real-time Price Updates E2E', () => {
-  const uniqueEmail = `test-${Date.now()}@example.com`;
+  const uniqueEmail = `test-${Date.now()}@testuser.com`;
   const password = 'SecureP@ss123';
 
   test.beforeEach(async ({ page }) => {
