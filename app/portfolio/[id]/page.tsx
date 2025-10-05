@@ -29,7 +29,75 @@ interface Holding {
   unrealizedPL: number;
 }
 
+async function getAuthSession() {
+  const { createClient } = await import('@/lib/supabase-browser');
+  const supabase = createClient();
+  const { data: { session } } = await supabase.auth.getSession();
+  return session;
+}
 
+async function loadPortfolioData(portfolioId: string, router: ReturnType<typeof useRouter>) {
+  const session = await getAuthSession();
+  if (!session?.access_token) {
+    router.push('/auth/login');
+    return null;
+  }
+
+  const portfolioRes = await fetch(`/api/portfolios/${portfolioId}`, {
+    headers: { 'Authorization': `Bearer ${session.access_token}` }
+  });
+  
+  const txRes = await fetch(`/api/portfolios/${portfolioId}/transactions`, {
+    headers: { 'Authorization': `Bearer ${session.access_token}` }
+  });
+
+  const portfolioData = portfolioRes.ok ? await portfolioRes.json() : null;
+  const txData = txRes.ok ? await txRes.json() : null;
+
+  return {
+    portfolio: portfolioData?.data?.portfolio || null,
+    transactions: txData?.data || []
+  };
+}
+
+function calculateHoldingsFromTransactions(transactions: Transaction[]): Holding[] {
+  const holdingsMap = new Map<string, { totalQty: number; totalCost: number }>();
+  
+  transactions.forEach(tx => {
+    const type = tx.type || tx.side || 'BUY';
+    const price = tx.price_per_unit || tx.price || 0;
+    
+    if (!holdingsMap.has(tx.symbol)) {
+      holdingsMap.set(tx.symbol, { totalQty: 0, totalCost: 0 });
+    }
+    
+    const holding = holdingsMap.get(tx.symbol)!;
+    
+    if (type === 'BUY') {
+      holding.totalQty += tx.quantity;
+      holding.totalCost += tx.quantity * price;
+    } else {
+      holding.totalQty -= tx.quantity;
+      holding.totalCost -= tx.quantity * price;
+    }
+  });
+  
+  return Array.from(holdingsMap.entries()).map(([symbol, data]) => {
+    const averageCost = data.totalQty > 0 ? data.totalCost / data.totalQty : 0;
+    const marketValue = data.totalQty * averageCost;
+    const unrealizedPL = marketValue - data.totalCost;
+    
+    return {
+      symbol,
+      totalQuantity: data.totalQty,
+      averageCost,
+      marketValue,
+      unrealizedPL
+    };
+  }).filter(h => h.totalQuantity > 0);
+}
+
+// eslint-disable-next-line complexity
 export default function PortfolioDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -40,8 +108,10 @@ export default function PortfolioDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Form state
   const [symbol, setSymbol] = useState('');
@@ -61,32 +131,10 @@ export default function PortfolioDetailPage() {
 
   const loadData = async () => {
     try {
-      // Dynamically import Supabase to avoid SSR issues
-      const { createClient } = await import('@/lib/supabase-browser');
-      const supabase = createClient();
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        router.push('/auth/login');
-        return;
-      }
-
-      // Fetch portfolio
-      const portfolioRes = await fetch(`/api/portfolios/${portfolioId}`, {
-        headers: { 'Authorization': `Bearer ${session.access_token}` }
-      });
-      if (portfolioRes.ok) {
-        const data = await portfolioRes.json();
-        setPortfolio(data.data.portfolio);
-      }
-
-      // Fetch transactions  
-      const txRes = await fetch(`/api/portfolios/${portfolioId}/transactions`, {
-        headers: { 'Authorization': `Bearer ${session.access_token}` }
-      });
-      if (txRes.ok) {
-        const data = await txRes.json();
-        setTransactions(data.data || []);
+      const data = await loadPortfolioData(portfolioId, router);
+      if (data) {
+        setPortfolio(data.portfolio);
+        setTransactions(data.transactions);
       }
     } catch (error) {
       console.error('Load error:', error);
@@ -100,10 +148,7 @@ export default function PortfolioDetailPage() {
     setIsCreating(true);
 
     try {
-      const { createClient } = await import('@/lib/supabase-browser');
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      const session = await getAuthSession();
       if (!session?.access_token) return;
 
       const res = await fetch(`/api/portfolios/${portfolioId}/transactions`, {
@@ -150,10 +195,7 @@ export default function PortfolioDetailPage() {
     setIsUpdating(true);
 
     try {
-      const { createClient } = await import('@/lib/supabase-browser');
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      const session = await getAuthSession();
       if (!session?.access_token) return;
 
       const res = await fetch(`/api/portfolios/${portfolioId}`, {
@@ -180,6 +222,30 @@ export default function PortfolioDetailPage() {
     }
   };
 
+  const handleDelete = async () => {
+    setIsDeleting(true);
+
+    try {
+      const session = await getAuthSession();
+      if (!session?.access_token) return;
+
+      const res = await fetch(`/api/portfolios/${portfolioId}`, {
+        method: 'DELETE',
+        headers: { 
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+
+      if (res.ok || res.status === 204) {
+        router.push('/dashboard');
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const calculateTotal = () => {
     return transactions.reduce((total, tx) => {
       const price = tx.price_per_unit || tx.price || 0;
@@ -189,49 +255,7 @@ export default function PortfolioDetailPage() {
     }, 0);
   };
 
-  const calculateHoldings = (): Holding[] => {
-    const holdingsMap = new Map<string, { totalQty: number; totalCost: number; transactions: Transaction[] }>();
-    
-    // Group transactions by symbol
-    transactions.forEach(tx => {
-      const type = tx.type || tx.side || 'BUY';
-      const price = tx.price_per_unit || tx.price || 0;
-      
-      if (!holdingsMap.has(tx.symbol)) {
-        holdingsMap.set(tx.symbol, { totalQty: 0, totalCost: 0, transactions: [] });
-      }
-      
-      const holding = holdingsMap.get(tx.symbol)!;
-      holding.transactions.push(tx);
-      
-      if (type === 'BUY') {
-        holding.totalQty += tx.quantity;
-        holding.totalCost += tx.quantity * price;
-      } else {
-        holding.totalQty -= tx.quantity;
-        holding.totalCost -= tx.quantity * price;
-      }
-    });
-    
-    // Convert to array and calculate averages
-    return Array.from(holdingsMap.entries()).map(([symbol, data]) => {
-      const averageCost = data.totalQty > 0 ? data.totalCost / data.totalQty : 0;
-      // For now, market value = total cost (we'll add live prices later)
-      const marketValue = data.totalQty * averageCost;
-      const unrealizedPL = marketValue - data.totalCost;
-      
-      return {
-        symbol,
-        totalQuantity: data.totalQty,
-        averageCost,
-        marketValue,
-        unrealizedPL
-      };
-    }).filter(h => h.totalQuantity > 0); // Only show holdings with quantity > 0
-  };
-
-  const holdings = calculateHoldings();
-
+  const holdings = calculateHoldingsFromTransactions(transactions);
 
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -257,6 +281,12 @@ export default function PortfolioDetailPage() {
           </div>
           
           <div className="flex gap-2">
+            <button 
+              onClick={() => setIsDeleteDialogOpen(true)}
+              className="px-4 py-2 border border-red-300 text-red-600 rounded hover:bg-red-50"
+            >
+              Delete Portfolio
+            </button>
             <button 
               onClick={handleEditClick}
               className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
@@ -482,6 +512,37 @@ export default function PortfolioDetailPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {isDeleteDialogOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg w-full max-w-md">
+            <h3 className="text-xl font-bold mb-4 text-red-600">Delete Portfolio</h3>
+            <p className="mb-6">
+              Are you sure you want to delete this portfolio? This action cannot be undone. 
+              All transactions associated with this portfolio will also be deleted.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsDeleteDialogOpen(false)}
+                className="px-4 py-2 border rounded"
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
           </div>
         </div>
       )}
