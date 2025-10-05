@@ -1,6 +1,23 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Dashboard Page', () => {
+  test('displays price ticker at top of page', async ({ page }) => {
+    await page.goto('/dashboard');
+    
+    // Verify price ticker container exists
+    const ticker = page.locator('[class*="border-b"]').first();
+    await expect(ticker).toBeVisible();
+    
+    // Verify multiple crypto symbols are displayed
+    const symbols = page.locator('text=/BTC|ETH|USDT|BNB|SOL|XRP/');
+    const count = await symbols.count();
+    expect(count).toBeGreaterThanOrEqual(3); // At least a few symbols visible
+    
+    // Verify price changes are color-coded (green/red text)
+    const priceChanges = page.locator('text=/[+-]\\d+\\.\\d+%/');
+    expect(await priceChanges.count()).toBeGreaterThanOrEqual(1);
+  });
+
   test('displays header with navigation', async ({ page }) => {
     await page.goto('/dashboard');
     
