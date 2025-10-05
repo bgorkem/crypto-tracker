@@ -157,10 +157,13 @@ test.describe('Portfolio Management E2E', () => {
     await page.fill('input[name="price_per_unit"]', '52000');
     await page.fill('input[name="transaction_date"]', '2025-10-02');
     await page.selectOption('select[name="transaction_type"]', 'BUY');
-    await page.click('button[type="submit"]:has-text("Add Transaction")');
+    await page.click('button[type="submit"]:has-text("Add Transaction")', { force: true });
     
     // Wait a bit for the second transaction
     await page.waitForTimeout(500);
+    
+    // Ensure dialog is closed before opening again
+    await expect(page.locator('h3:has-text("Add Transaction")')).not.toBeVisible();
     
     // Add third transaction: Buy 10 ETH at $3,000
     await page.locator('button:has-text("Add Transaction")').click({ force: true });
@@ -169,7 +172,7 @@ test.describe('Portfolio Management E2E', () => {
     await page.fill('input[name="price_per_unit"]', '3000');
     await page.fill('input[name="transaction_date"]', '2025-10-03');
     await page.selectOption('select[name="transaction_type"]', 'BUY');
-    await page.click('button[type="submit"]:has-text("Add Transaction")');
+    await page.click('button[type="submit"]:has-text("Add Transaction")', { force: true });
     
     // Wait for transaction to appear
     await page.waitForTimeout(500);

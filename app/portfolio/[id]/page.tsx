@@ -2,6 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { PortfolioHeader } from "./components/PortfolioHeader";
+import { PortfolioStats } from "./components/PortfolioStats";
+import { HoldingsTable } from "./components/HoldingsTable";
+import { TransactionsTable } from "./components/TransactionsTable";
+import { AddTransactionDialog } from "./components/AddTransactionDialog";
+import { EditPortfolioDialog } from "./components/EditPortfolioDialog";
+import { DeletePortfolioDialog } from "./components/DeletePortfolioDialog";
+import { calculateHoldingsFromTransactions } from "./lib/holdings";
 
 interface Portfolio {
   id: string;
@@ -19,14 +27,6 @@ interface Transaction {
   side?: 'BUY' | 'SELL';
   transaction_date?: string;
   executed_at?: string;
-}
-
-interface Holding {
-  symbol: string;
-  totalQuantity: number;
-  averageCost: number;
-  marketValue: number;
-  unrealizedPL: number;
 }
 
 async function getAuthSession() {
@@ -60,44 +60,6 @@ async function loadPortfolioData(portfolioId: string, router: ReturnType<typeof 
   };
 }
 
-function calculateHoldingsFromTransactions(transactions: Transaction[]): Holding[] {
-  const holdingsMap = new Map<string, { totalQty: number; totalCost: number }>();
-  
-  transactions.forEach(tx => {
-    const type = tx.type || tx.side || 'BUY';
-    const price = tx.price_per_unit || tx.price || 0;
-    
-    if (!holdingsMap.has(tx.symbol)) {
-      holdingsMap.set(tx.symbol, { totalQty: 0, totalCost: 0 });
-    }
-    
-    const holding = holdingsMap.get(tx.symbol)!;
-    
-    if (type === 'BUY') {
-      holding.totalQty += tx.quantity;
-      holding.totalCost += tx.quantity * price;
-    } else {
-      holding.totalQty -= tx.quantity;
-      holding.totalCost -= tx.quantity * price;
-    }
-  });
-  
-  return Array.from(holdingsMap.entries()).map(([symbol, data]) => {
-    const averageCost = data.totalQty > 0 ? data.totalCost / data.totalQty : 0;
-    const marketValue = data.totalQty * averageCost;
-    const unrealizedPL = marketValue - data.totalCost;
-    
-    return {
-      symbol,
-      totalQuantity: data.totalQty,
-      averageCost,
-      marketValue,
-      unrealizedPL
-    };
-  }).filter(h => h.totalQuantity > 0);
-}
-
-// eslint-disable-next-line complexity
 export default function PortfolioDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -109,150 +71,29 @@ export default function PortfolioDetailPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  // Form state
-  const [symbol, setSymbol] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [pricePerUnit, setPricePerUnit] = useState('');
-  const [transactionType, setTransactionType] = useState<'BUY' | 'SELL'>('BUY');
-  const [transactionDate, setTransactionDate] = useState('');
-
-  // Edit form state
-  const [editName, setEditName] = useState('');
-  const [editDescription, setEditDescription] = useState('');
 
   useEffect(() => {
-    loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [portfolioId]);
-
-  const loadData = async () => {
-    try {
-      const data = await loadPortfolioData(portfolioId, router);
+    loadPortfolioData(portfolioId, router).then(data => {
       if (data) {
         setPortfolio(data.portfolio);
         setTransactions(data.transactions);
       }
-    } catch (error) {
-      console.error('Load error:', error);
-    } finally {
       setIsLoading(false);
-    }
+    });
+  }, [portfolioId, router]);
+
+  const handleTransactionSuccess = (newTransaction: Transaction) => {
+    setTransactions(prev => [newTransaction, ...prev]);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsCreating(true);
-
-    try {
-      const session = await getAuthSession();
-      if (!session?.access_token) return;
-
-      const res = await fetch(`/api/portfolios/${portfolioId}/transactions`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          symbol: symbol.toUpperCase(),
-          quantity: parseFloat(quantity),
-          price: parseFloat(pricePerUnit),
-          side: transactionType,
-          executed_at: transactionDate
-        })
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setTransactions(prev => [data.data, ...prev]);
-        setIsDialogOpen(false);
-        setSymbol('');
-        setQuantity('');
-        setPricePerUnit('');
-        setTransactionDate('');
-      }
-    } catch (error) {
-      console.error('Create error:', error);
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
-  const handleEditClick = () => {
+  const handleEditSuccess = (name: string, description: string) => {
     if (portfolio) {
-      setEditName(portfolio.name);
-      setEditDescription(portfolio.description || '');
-      setIsEditDialogOpen(true);
+      setPortfolio({ ...portfolio, name, description });
     }
   };
 
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsUpdating(true);
-
-    try {
-      const session = await getAuthSession();
-      if (!session?.access_token) return;
-
-      const res = await fetch(`/api/portfolios/${portfolioId}`, {
-        method: 'PATCH',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          name: editName,
-          description: editDescription
-        })
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setPortfolio(data.data);
-        setIsEditDialogOpen(false);
-      }
-    } catch (error) {
-      console.error('Update error:', error);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    setIsDeleting(true);
-
-    try {
-      const session = await getAuthSession();
-      if (!session?.access_token) return;
-
-      const res = await fetch(`/api/portfolios/${portfolioId}`, {
-        method: 'DELETE',
-        headers: { 
-          'Authorization': `Bearer ${session.access_token}`
-        }
-      });
-
-      if (res.ok || res.status === 204) {
-        router.push('/dashboard');
-      }
-    } catch (error) {
-      console.error('Delete error:', error);
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const calculateTotal = () => {
-    return transactions.reduce((total, tx) => {
-      const price = tx.price_per_unit || tx.price || 0;
-      const amount = tx.quantity * price;
-      const type = tx.type || tx.side;
-      return type === 'BUY' ? total + amount : total - amount;
-    }, 0);
+  const handleDeleteSuccess = () => {
+    router.push('/dashboard');
   };
 
   const holdings = calculateHoldingsFromTransactions(transactions);
@@ -267,285 +108,44 @@ export default function PortfolioDetailPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b p-4">
-        <button onClick={() => router.push('/dashboard')} className="px-4 py-2 border rounded">
-          ← Back
-        </button>
-      </header>
+      <PortfolioHeader
+        name={portfolio.name}
+        description={portfolio.description}
+        onBack={() => router.push('/dashboard')}
+        onDelete={() => setIsDeleteDialogOpen(true)}
+        onEdit={() => setIsEditDialogOpen(true)}
+        onAddTransaction={() => setIsDialogOpen(true)}
+      />
 
       <main className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="text-3xl font-bold">{portfolio.name}</h2>
-            <p className="text-gray-600">{portfolio.description || 'No description'}</p>
-          </div>
-          
-          <div className="flex gap-2">
-            <button 
-              onClick={() => setIsDeleteDialogOpen(true)}
-              className="px-4 py-2 border border-red-300 text-red-600 rounded hover:bg-red-50"
-            >
-              Delete Portfolio
-            </button>
-            <button 
-              onClick={handleEditClick}
-              className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
-            >
-              Edit Portfolio
-            </button>
-            <button 
-              onClick={() => setIsDialogOpen(true)}
-              className="px-4 py-2 bg-black text-white rounded"
-            >
-              + Add Transaction
-            </button>
-          </div>
-        </div>
-
-        <div className="mb-8 p-6 border rounded">
-          <p className="text-sm text-gray-600">Total Portfolio Value</p>
-          <p className="text-4xl font-bold">${calculateTotal().toFixed(2)}</p>
-        </div>
-
-        {/* Holdings Table */}
-        {holdings.length > 0 && (
-          <div className="border rounded p-6 mb-8">
-            <h3 className="text-xl font-bold mb-4">Holdings</h3>
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-2">Symbol</th>
-                  <th className="text-right p-2">Quantity</th>
-                  <th className="text-right p-2">Avg Cost</th>
-                  <th className="text-right p-2">Market Value</th>
-                  <th className="text-right p-2">Unrealized P/L</th>
-                </tr>
-              </thead>
-              <tbody>
-                {holdings.map((holding) => (
-                  <tr key={holding.symbol} className="border-b">
-                    <td className="p-2 font-medium">{holding.symbol}</td>
-                    <td className="p-2 text-right">{holding.totalQuantity}</td>
-                    <td className="p-2 text-right">${holding.averageCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td className="p-2 text-right">${holding.marketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td className={`p-2 text-right ${holding.unrealizedPL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      ${holding.unrealizedPL.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        <div className="border rounded p-6">
-          <h3 className="text-xl font-bold mb-4">Transactions</h3>
-          {transactions.length === 0 ? (
-            <p className="text-center py-8 text-gray-500">No transactions yet</p>
-          ) : (
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-2">Symbol</th>
-                  <th className="text-left p-2">Type</th>
-                  <th className="text-right p-2">Quantity</th>
-                  <th className="text-right p-2">Price</th>
-                  <th className="text-right p-2">Total</th>
-                  <th className="text-left p-2">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.map((tx) => {
-                  const txType = tx.type || tx.side || 'BUY';
-                  const txPrice = tx.price_per_unit || tx.price || 0;
-                  const txDate = tx.transaction_date || tx.executed_at || '';
-                  return (
-                    <tr key={tx.id} className="border-b">
-                      <td className="p-2 font-medium">{tx.symbol}</td>
-                      <td className="p-2">
-                        <span className={txType === 'BUY' ? 'text-green-600' : 'text-red-600'}>
-                          {txType}
-                        </span>
-                      </td>
-                      <td className="p-2 text-right">{tx.quantity}</td>
-                      <td className="p-2 text-right">${txPrice.toLocaleString()}</td>
-                      <td className="p-2 text-right">${(tx.quantity * txPrice).toLocaleString()}</td>
-                      <td className="p-2">{new Date(txDate).toLocaleDateString()}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
+        <PortfolioStats transactions={transactions} />
+        <HoldingsTable holdings={holdings} />
+        <TransactionsTable transactions={transactions} />
       </main>
 
-      {/* Simple Dialog */}
-      {isDialogOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg w-full max-w-md">
-            <h3 className="text-xl font-bold mb-4">Add Transaction</h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Symbol</label>
-                <input
-                  name="symbol"
-                  type="text"
-                  value={symbol}
-                  onChange={(e) => setSymbol(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border rounded"
-                  placeholder="BTC"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Quantity</label>
-                <input
-                  name="quantity"
-                  type="number"
-                  step="any"
-                  value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border rounded"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Price Per Unit</label>
-                <input
-                  name="price_per_unit"
-                  type="number"
-                  step="any"
-                  value={pricePerUnit}
-                  onChange={(e) => setPricePerUnit(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border rounded"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Type</label>
-                <select
-                  name="transaction_type"
-                  value={transactionType}
-                  onChange={(e) => setTransactionType(e.target.value as 'BUY' | 'SELL')}
-                  className="w-full px-3 py-2 border rounded"
-                >
-                  <option value="BUY">BUY</option>
-                  <option value="SELL">SELL</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Date</label>
-                <input
-                  name="transaction_date"
-                  type="date"
-                  value={transactionDate}
-                  onChange={(e) => setTransactionDate(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border rounded"
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsDialogOpen(false)}
-                  className="px-4 py-2 border rounded"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isCreating}
-                  className="px-4 py-2 bg-black text-white rounded"
-                >
-                  {isCreating ? 'Adding...' : 'Add Transaction'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <AddTransactionDialog
+        isOpen={isDialogOpen}
+        portfolioId={portfolioId}
+        onClose={() => setIsDialogOpen(false)}
+        onSuccess={handleTransactionSuccess}
+      />
 
-      {/* Edit Portfolio Dialog */}
-      {isEditDialogOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-md">
-            <h3 className="text-xl font-bold mb-4">Edit Portfolio</h3>
-            <form onSubmit={handleEditSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Portfolio Name</label>
-                <input
-                  name="name"
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border rounded"
-                  placeholder="My Portfolio"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Description</label>
-                <textarea
-                  name="description"
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  className="w-full px-3 py-2 border rounded"
-                  rows={3}
-                  placeholder="Optional description"
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsEditDialogOpen(false)}
-                  className="px-4 py-2 border rounded"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isUpdating}
-                  className="px-4 py-2 bg-black text-white rounded"
-                >
-                  {isUpdating ? 'Saving...' : 'Save'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <EditPortfolioDialog
+        isOpen={isEditDialogOpen}
+        portfolioId={portfolioId}
+        currentName={portfolio.name}
+        currentDescription={portfolio.description}
+        onClose={() => setIsEditDialogOpen(false)}
+        onSuccess={handleEditSuccess}
+      />
 
-      {/* Delete Confirmation Dialog */}
-      {isDeleteDialogOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-md">
-            <h3 className="text-xl font-bold mb-4 text-red-600">Delete Portfolio</h3>
-            <p className="mb-6">
-              Are you sure you want to delete this portfolio? This action cannot be undone. 
-              All transactions associated with this portfolio will also be deleted.
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setIsDeleteDialogOpen(false)}
-                className="px-4 py-2 border rounded"
-                disabled={isDeleting}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-              >
-                {isDeleting ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeletePortfolioDialog
+        isOpen={isDeleteDialogOpen}
+        portfolioId={portfolioId}
+        portfolioName={portfolio.name}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onSuccess={handleDeleteSuccess}
+      />
     </div>
   );
 }
