@@ -4,47 +4,57 @@
  */
 
 /**
- * Supported Cryptocurrency Symbols (30 for MVP)
- * Used for price ticker, transaction validation, and portfolio tracking
+ * Supported Cryptocurrency Symbols
+ * IMPORTANT: Limited to tokens with verified Ethereum mainnet ERC20 contract addresses
+ * that are supported by Moralis API v2.2
+ * 
+ * Note: Many tokens don't have verified ERC20 wrapped versions or aren't indexed by Moralis.
+ * This is a limitation of the free tier Moralis API, not the application architecture.
  */
 export const SUPPORTED_SYMBOLS = [
-  // Top 10 by Market Cap (Essential)
-  'BTC',   // Bitcoin
-  'ETH',   // Ethereum
+  // Top cryptocurrencies with verified ERC20 addresses (7 working)
+  'BTC',   // Bitcoin (WBTC on Ethereum)
+  'ETH',   // Ethereum (WETH on Ethereum)
   'USDT',  // Tether
   'BNB',   // Binance Coin
-  'SOL',   // Solana
+  'SOL',   // Solana (Wrapped SOL)
   'USDC',  // USD Coin
   'XRP',   // Ripple
-  'ADA',   // Cardano
-  'AVAX',  // Avalanche
-  'DOGE',  // Dogecoin
   
-  // DeFi & Layer 1 (10)
-  'DOT',   // Polkadot
-  'MATIC', // Polygon
-  'LINK',  // Chainlink
-  'UNI',   // Uniswap
-  'ATOM',  // Cosmos
-  'LTC',   // Litecoin
-  'NEAR',  // NEAR Protocol
-  'APT',   // Aptos
-  'ARB',   // Arbitrum
-  'OP',    // Optimism
+  // The following symbols are commented out due to Moralis API limitations:
+  // - No verified ERC20 contract addresses found
+  // - API returns "Not Found" or "Bad Request" errors
+  // - Would require native chain integration (non-Ethereum)
   
-  // Meme & Popular (5)
-  'SHIB',  // Shiba Inu
-  'PEPE',  // Pepe
-  'WIF',   // dogwifhat
-  'BONK',  // Bonk
-  'FLOKI', // Floki Inu
+  // 'ADA',   // Cardano - Not Found
+  // 'ATOM',  // Cosmos - Bad Request
+  // 'AVAX',  // Avalanche - Not Found (native chain needed)
+  // 'DOGE',  // Dogecoin - Not Found
   
-  // Emerging & Infrastructure (5)
-  'SUI',   // Sui
-  'SEI',   // Sei
-  'INJ',   // Injective
-  'TIA',   // Celestia
-  'RUNE',  // THORChain
+  // // DeFi & Layer 1 (10)
+  // 'DOT',   // Polkadot - Not Found
+  // 'MATIC', // Polygon - Would need polygon chain endpoint
+  // 'LINK',  // Chainlink
+  // 'UNI',   // Uniswap
+  // 'LTC',   // Litecoin - Not Found
+  // 'NEAR',  // NEAR Protocol - Not Found
+  // 'APT',   // Aptos - Not Found
+  // 'ARB',   // Arbitrum - Not Found
+  // 'OP',    // Optimism - Not Found
+  
+  // // Meme & Popular (5)
+  // 'SHIB',  // Shiba Inu
+  // 'PEPE',  // Pepe
+  // 'WIF',   // dogwifhat
+  // 'BONK',  // Bonk
+  // 'FLOKI', // Floki Inu
+  
+  // // Emerging & Infrastructure (5)
+  // 'SUI',   // Sui - Not Found
+  // 'SEI',   // Sei - Not Found
+  // 'INJ',   // Injective - Not Found
+  // 'TIA',   // Celestia - Not Found
+  // 'RUNE',  // THORChain - Not Found
 ] as const;
 
 export type SupportedSymbol = typeof SUPPORTED_SYMBOLS[number];

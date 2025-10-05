@@ -11,6 +11,13 @@ interface PriceData {
   received_at: string;
 }
 
+  async function getAuthSession() {
+    const { createClient } = await import('@/lib/supabase-browser');
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    return session;
+  }
+
 /**
  * PriceTicker Component
  * Displays horizontal auto-scrolling ticker with live cryptocurrency prices
@@ -29,7 +36,8 @@ export function PriceTicker() {
     queryKey: ['prices', 'ticker'],
     queryFn: async () => {
       const symbols = SUPPORTED_SYMBOLS.join(',');
-      const res = await fetch(`/api/prices?symbols=${symbols}`);
+      const session = await getAuthSession();
+      const res = (await fetch(`/api/prices?symbols=${symbols}`, {headers: {'Authorization': `Bearer ${session?.access_token}`}}));
       if (!res.ok) {
         throw new Error('Failed to fetch prices');
       }

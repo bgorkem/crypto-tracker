@@ -123,11 +123,32 @@ A new user signs up, creates a portfolio, adds initial BUY transactions for seve
 - **PriceEvent**: symbol, price, change_24h_abs, change_24h_pct, received_at
 - **PortfolioValueSnapshot**: portfolio_id, total_value, captured_at (daily or event-triggered)
 
-### Supported Cryptocurrency Symbols (30 for MVP)
-**Top 10 by Market Cap**: BTC, ETH, USDT, BNB, SOL, USDC, XRP, ADA, AVAX, DOGE  
-**DeFi & Layer 1**: DOT, MATIC, LINK, UNI, ATOM, LTC, NEAR, APT, ARB, OP  
-**Meme & Popular**: SHIB, PEPE, WIF, BONK, FLOKI  
-**Emerging & Infrastructure**: SUI, SEI, INJ, TIA, RUNE
+### Supported Cryptocurrency Symbols
+
+⚠️ **IMPORTANT UPDATE (2025-01-05)**: During T089 implementation, Moralis API limitations were discovered. The free tier only supports ERC20 tokens with verified Ethereum contracts and sufficient liquidity.
+
+**Current Support (7 Working Symbols)**:
+- **BTC** (WBTC - Wrapped Bitcoin on Ethereum)
+- **ETH** (WETH - Wrapped Ethereum)
+- **USDT** (Tether - Stablecoin)
+- **BNB** (Binance Coin - Wrapped on Ethereum)
+- **SOL** (Wrapped Solana on Ethereum)
+- **USDC** (USD Coin - Stablecoin)
+- **XRP** (Wrapped Ripple on Ethereum)
+
+**Known Limitations**:
+- 23 symbols from original plan are NOT supported by Moralis free tier
+- Symbols requiring native chain integration: AVAX, NEAR, APT, SUI, SEI, TIA
+- Symbols with no ERC20 wrapper found: ADA, DOGE, DOT, LTC, ATOM
+- Multi-chain symbols needing separate endpoints: MATIC, ARB, OP
+- Low liquidity/meme coins: SHIB, PEPE, WIF, BONK, FLOKI
+
+**Future Enhancement Path**:
+1. **Short-term**: Integrate CoinGecko API to restore 30+ symbol support (free tier: 10-50 calls/min)
+2. **Medium-term**: Implement hybrid Moralis + CoinGecko approach for better coverage
+3. **Long-term**: Consider Moralis Pro ($49/mo) or native chain RPC integration
+
+**Reference**: See `docs/MORALIS-API-LIMITATIONS.md` for detailed analysis and recommended solutions.
 
 **UI Display**: Horizontal auto-scrolling ticker strip at top of dashboard showing live prices with 24h % change (color-coded green/red), stale badge when data >30s old.
 

@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
   const token = authHeader?.replace('Bearer ', '');
 
   if (!token) {
+    console.error('Missing or invalid authentication token');
     return NextResponse.json(
       { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
       { status: 401 }

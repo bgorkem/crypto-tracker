@@ -3,34 +3,13 @@ import { SUPPORTED_SYMBOLS, STALE_PRICE_THRESHOLD_MS, QUERY_CONFIG } from '@/lib
 
 describe('Constants', () => {
   describe('SUPPORTED_SYMBOLS', () => {
-    it('should contain exactly 30 symbols', () => {
-      expect(SUPPORTED_SYMBOLS).toHaveLength(30);
+    it('should contain exactly 7 working symbols (Moralis API limitation)', () => {
+      expect(SUPPORTED_SYMBOLS).toHaveLength(7);
     });
 
-    it('should include top cryptocurrencies', () => {
-      const topCryptos = ['BTC', 'ETH', 'USDT', 'BNB', 'SOL', 'XRP', 'USDC', 'ADA', 'AVAX', 'DOGE'];
-      topCryptos.forEach(symbol => {
-        expect(SUPPORTED_SYMBOLS).toContain(symbol);
-      });
-    });
-
-    it('should include DeFi and Layer 1 tokens', () => {
-      const defiL1 = ['DOT', 'MATIC', 'LINK', 'UNI', 'ATOM'];
-      defiL1.forEach(symbol => {
-        expect(SUPPORTED_SYMBOLS).toContain(symbol);
-      });
-    });
-
-    it('should include meme coins', () => {
-      const memeCoins = ['SHIB', 'PEPE', 'WIF', 'BONK'];
-      memeCoins.forEach(symbol => {
-        expect(SUPPORTED_SYMBOLS).toContain(symbol);
-      });
-    });
-
-    it('should include emerging/newer chains', () => {
-      const emergingChains = ['SUI', 'SEI', 'APT', 'INJ', 'TIA', 'RUNE'];
-      emergingChains.forEach(symbol => {
+    it('should include verified ERC20 tokens with Moralis support', () => {
+      const workingCryptos = ['BTC', 'ETH', 'USDT', 'BNB', 'SOL', 'USDC', 'XRP'];
+      workingCryptos.forEach(symbol => {
         expect(SUPPORTED_SYMBOLS).toContain(symbol);
       });
     });
@@ -43,6 +22,13 @@ describe('Constants', () => {
     it('should only contain uppercase symbols', () => {
       SUPPORTED_SYMBOLS.forEach(symbol => {
         expect(symbol).toBe(symbol.toUpperCase());
+      });
+    });
+
+    it('should include major stablecoins', () => {
+      const stablecoins = ['USDT', 'USDC'];
+      stablecoins.forEach(symbol => {
+        expect(SUPPORTED_SYMBOLS).toContain(symbol);
       });
     });
   });
