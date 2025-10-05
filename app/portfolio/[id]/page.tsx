@@ -21,6 +21,15 @@ interface Transaction {
   executed_at?: string;
 }
 
+interface Holding {
+  symbol: string;
+  totalQuantity: number;
+  averageCost: number;
+  marketValue: number;
+  unrealizedPL: number;
+}
+
+
 export default function PortfolioDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -131,6 +140,50 @@ export default function PortfolioDetailPage() {
     }, 0);
   };
 
+  const calculateHoldings = (): Holding[] => {
+    const holdingsMap = new Map<string, { totalQty: number; totalCost: number; transactions: Transaction[] }>();
+    
+    // Group transactions by symbol
+    transactions.forEach(tx => {
+      const type = tx.type || tx.side || 'BUY';
+      const price = tx.price_per_unit || tx.price || 0;
+      
+      if (!holdingsMap.has(tx.symbol)) {
+        holdingsMap.set(tx.symbol, { totalQty: 0, totalCost: 0, transactions: [] });
+      }
+      
+      const holding = holdingsMap.get(tx.symbol)!;
+      holding.transactions.push(tx);
+      
+      if (type === 'BUY') {
+        holding.totalQty += tx.quantity;
+        holding.totalCost += tx.quantity * price;
+      } else {
+        holding.totalQty -= tx.quantity;
+        holding.totalCost -= tx.quantity * price;
+      }
+    });
+    
+    // Convert to array and calculate averages
+    return Array.from(holdingsMap.entries()).map(([symbol, data]) => {
+      const averageCost = data.totalQty > 0 ? data.totalCost / data.totalQty : 0;
+      // For now, market value = total cost (we'll add live prices later)
+      const marketValue = data.totalQty * averageCost;
+      const unrealizedPL = marketValue - data.totalCost;
+      
+      return {
+        symbol,
+        totalQuantity: data.totalQty,
+        averageCost,
+        marketValue,
+        unrealizedPL
+      };
+    }).filter(h => h.totalQuantity > 0); // Only show holdings with quantity > 0
+  };
+
+  const holdings = calculateHoldings();
+
+
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
@@ -166,6 +219,37 @@ export default function PortfolioDetailPage() {
           <p className="text-sm text-gray-600">Total Portfolio Value</p>
           <p className="text-4xl font-bold">${calculateTotal().toFixed(2)}</p>
         </div>
+
+        {/* Holdings Table */}
+        {holdings.length > 0 && (
+          <div className="border rounded p-6 mb-8">
+            <h3 className="text-xl font-bold mb-4">Holdings</h3>
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-2">Symbol</th>
+                  <th className="text-right p-2">Quantity</th>
+                  <th className="text-right p-2">Avg Cost</th>
+                  <th className="text-right p-2">Market Value</th>
+                  <th className="text-right p-2">Unrealized P/L</th>
+                </tr>
+              </thead>
+              <tbody>
+                {holdings.map((holding) => (
+                  <tr key={holding.symbol} className="border-b">
+                    <td className="p-2 font-medium">{holding.symbol}</td>
+                    <td className="p-2 text-right">{holding.totalQuantity}</td>
+                    <td className="p-2 text-right">${holding.averageCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td className="p-2 text-right">${holding.marketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td className={`p-2 text-right ${holding.unrealizedPL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      ${holding.unrealizedPL.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         <div className="border rounded p-6">
           <h3 className="text-xl font-bold mb-4">Transactions</h3>
