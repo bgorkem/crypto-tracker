@@ -184,7 +184,8 @@ app/api/charts/[symbol]/route.ts        (T072) ✅
 - ❌ **T082 Implement loading states and skeleton loaders** *(components/ui/skeleton.tsx exists, needs integration)*
 - ❌ **T083 Implement error boundaries and toast notifications** *(app/error.tsx, components/ui/toaster.tsx)*
 - ❌ **T084 Implement stale price indicator logic** *(components/dashboard/PriceTickerPanel.tsx - depends on T089)*
-- ✅ **T089 Build PriceTicker component** *(components/dashboard/PriceTicker.tsx - 112 lines, integrated into dashboard, unit tests passing)*
+- ✅ **T089 Build PriceTicker component** *(components/dashboard/PriceTicker.tsx - 112 lines, integrated into dashboard, unit tests passing)*  
+  **Note**: MVP launched with 7 symbols (Moralis API limitation). Expansion to 30+ symbols planned as **Day 2 enhancement** (D2-001) via CoinGecko API integration. See `docs/DAY2-REQUIREMENTS.md`.
 - ❌ **T090 Build PortfolioValueChart component** *(NEW - components/portfolio/PortfolioValueChart.tsx)*
 - ❌ **T091 Build Dashboard page integration** *(NEW - app/dashboard/page.tsx with portfolio switcher)*
 - ❌ **T092 Add transaction filter controls** *(NEW - app/portfolio/[id]/components/TransactionFilters.tsx)*

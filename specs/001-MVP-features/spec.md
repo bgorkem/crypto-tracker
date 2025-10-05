@@ -82,7 +82,8 @@ A new user signs up, creates a portfolio, adds initial BUY transactions for seve
 - **FR-006**: System MUST allow editing transaction quantity, price, timestamp, and notes at any time after creation.
 - **FR-007**: System MUST allow deletion of transactions with immediate recalculation of derived holdings.
 - **FR-008**: System MUST maintain derived holdings per (portfolio, symbol): total quantity, average cost, market value, unrealized P/L.
-- **FR-009**: System MUST fetch price data for ≥30 supported symbols at configured interval or streaming feed.
+- **FR-009**: System MUST fetch price data for ≥30 supported symbols at configured interval or streaming feed.  
+  **MVP Status**: ⚠️ Partially satisfied (7 symbols) - **Day 2 enhancement planned** to expand to 30+ via CoinGecko API integration.
 - **FR-010**: System MUST compute total portfolio value = Σ (holding quantity × latest price) on each price or transaction change.
 - **FR-011**: System MUST display 24h price change (absolute & percent) for each asset.
 - **FR-012**: System must display warning/error indicator when price data is stale (>30 seconds old).
@@ -125,7 +126,7 @@ A new user signs up, creates a portfolio, adds initial BUY transactions for seve
 
 ### Supported Cryptocurrency Symbols
 
-⚠️ **IMPORTANT UPDATE (2025-01-05)**: During T089 implementation, Moralis API limitations were discovered. The free tier only supports ERC20 tokens with verified Ethereum contracts and sufficient liquidity.
+**MVP Status (2025-01-05)**: ✅ **ACCEPTED** - 7 symbols sufficient for MVP launch
 
 **Current Support (7 Working Symbols)**:
 - **BTC** (WBTC - Wrapped Bitcoin on Ethereum)
@@ -136,19 +137,27 @@ A new user signs up, creates a portfolio, adds initial BUY transactions for seve
 - **USDC** (USD Coin - Stablecoin)
 - **XRP** (Wrapped Ripple on Ethereum)
 
-**Known Limitations**:
-- 23 symbols from original plan are NOT supported by Moralis free tier
+**Rationale for MVP**: 
+- Covers top 7 cryptocurrencies by market cap + major stablecoins
+- Demonstrates core price tracking functionality
+- Sufficient for MVP user validation
+- Moralis API free tier limitation (ERC20-only on Ethereum mainnet)
+
+**Day 2 Enhancement** 📋 **PLANNED**:
+- **Goal**: Expand to 30+ cryptocurrency symbols
+- **Implementation**: Integrate CoinGecko API (free tier: 10-50 calls/min)
+- **Effort**: 1-2 days
+- **Priority**: High (first post-MVP sprint)
+- **Reference**: See `docs/DAY2-REQUIREMENTS.md` for full roadmap
+
+**Known Limitations (Addressed Post-MVP)**:
+- 23 symbols from original plan deferred to Day 2
 - Symbols requiring native chain integration: AVAX, NEAR, APT, SUI, SEI, TIA
 - Symbols with no ERC20 wrapper found: ADA, DOGE, DOT, LTC, ATOM
 - Multi-chain symbols needing separate endpoints: MATIC, ARB, OP
 - Low liquidity/meme coins: SHIB, PEPE, WIF, BONK, FLOKI
 
-**Future Enhancement Path**:
-1. **Short-term**: Integrate CoinGecko API to restore 30+ symbol support (free tier: 10-50 calls/min)
-2. **Medium-term**: Implement hybrid Moralis + CoinGecko approach for better coverage
-3. **Long-term**: Consider Moralis Pro ($49/mo) or native chain RPC integration
-
-**Reference**: See `docs/MORALIS-API-LIMITATIONS.md` for detailed analysis and recommended solutions.
+**Technical Details**: See `docs/MORALIS-API-LIMITATIONS.md` for detailed analysis.
 
 **UI Display**: Horizontal auto-scrolling ticker strip at top of dashboard showing live prices with 24h % change (color-coded green/red), stale badge when data >30s old.
 
