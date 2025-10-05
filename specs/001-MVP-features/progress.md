@@ -1,7 +1,7 @@
 # MVP Feature Implementation Progress
 
-**Last Updated**: 2025-01-05 (T034 completed)  
-**Overall Progress**: 71/88 tasks (81%)
+**Last Updated**: 2025-01-05 (T034, T081 completed)  
+**Overall Progress**: 72/88 tasks (82%)
 
 ---
 
@@ -168,7 +168,7 @@ app/api/charts/[symbol]/route.ts        (T072) ✅
 ---
 
 ## Phase 5: UI Components & Pages (React/Next.js) ⏳ IN PROGRESS
-**Status**: 7/10 tasks (70%)
+**Status**: 8/10 tasks (80%)
 
 ### UI Component Library
 - ✅ T074 Build Login page (/auth/login) *(app/auth/login/page.tsx)*
@@ -178,7 +178,7 @@ app/api/charts/[symbol]/route.ts        (T072) ✅
 - ✅ T078 Build Holdings Table component with P/L columns *(app/portfolio/[id]/components/HoldingsTable.tsx - 65 lines)*
 - ✅ T079 Build Transaction History component *(app/portfolio/[id]/components/TransactionsTable.tsx - 81 lines)*
 - ✅ T080 Build Add Transaction form with SELL validation *(app/portfolio/[id]/components/AddTransactionDialog.tsx - 172 lines)*
-- ❌ **T081 Build Edit Portfolio dialog** *(app/portfolio/[id]/components/EditPortfolioDialog.tsx exists - 120 lines, needs verification)*
+- ✅ **T081 Build Edit Portfolio dialog** *(app/portfolio/[id]/components/EditPortfolioDialog.tsx - 120 lines, E2E test passing)*
 - ❌ **T082 Build Price Ticker component with real-time updates**
 - ❌ **T083 Build Chart component with TradingView Lightweight Charts**
 
@@ -202,11 +202,11 @@ app/portfolio/[id]/lib/holdings.ts                   56 lines (calculations)
 
 ---
 
-## Remaining Work (17 tasks)
+## Remaining Work (16 tasks)
 
 ### Critical Path to MVP
 1. ✅ **T034**: Real-time updates E2E test - **COMPLETE**
-2. **T081**: Verify Edit Portfolio dialog implementation
+2. ✅ **T081**: Edit Portfolio dialog - **COMPLETE**
 3. **T082**: Build Price Ticker component with real-time updates ← **NEXT PRIORITY**
 4. **T083**: Build Chart component with TradingView Lightweight Charts
 
@@ -282,10 +282,9 @@ a0c1d58 - fix: Remove invalid tw-animate-css import from globals.css
 
 ## Summary
 
-The project is **80% complete** with all critical infrastructure (Phases 1-3) and most core features (Phase 4) implemented. The backend is fully functional with 100% contract test coverage. The remaining work focuses on:
+The project is **82% complete** with all critical infrastructure (Phases 1-3) and most core features (Phase 4) implemented. The backend is fully functional with 100% contract test coverage. The remaining work focuses on:
 
-- **1 E2E test** (real-time updates)
-- **3 UI components** (edit dialog verification, price ticker, charts)
+- **2 UI components** (price ticker, charts)
 - **1 optional endpoint** (bulk import)
 
 The codebase is production-ready for core portfolio tracking, with real-time price updates and advanced charting as the final polish items.
