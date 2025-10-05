@@ -210,4 +210,52 @@ test.describe('Portfolio Management E2E', () => {
     // For now, we just verify the columns exist and show values
     // In a real implementation, we'd mock the price API or use test fixtures
   });
+
+  test('Step 4: Edit portfolio', async ({ page }) => {
+    // First, create a portfolio
+    await page.click('button:has-text("Create Portfolio")');
+    await page.fill('input[name="name"]', 'Original Portfolio Name');
+    await page.fill('textarea[name="description"]', 'Original description');
+    await page.click('button[type="submit"]:has-text("Create")');
+    
+    // Wait for portfolio to appear
+    await page.waitForSelector('text=Original Portfolio Name', { state: 'visible', timeout: 10000 });
+    await page.waitForTimeout(500);
+    
+    // Navigate to portfolio detail page
+    await page.click('text=Original Portfolio Name');
+    await page.waitForURL(/\/portfolio\/[^/]+/, { timeout: 10000 });
+    await expect(page.locator('h2:has-text("Original Portfolio Name")')).toBeVisible({ timeout: 10000 });
+
+    // Click "Edit Portfolio" button
+    await page.click('button:has-text("Edit Portfolio")');
+    
+    // Should see edit form dialog
+    await expect(page.locator('input[name="name"]')).toBeVisible();
+    await expect(page.locator('textarea[name="description"]')).toBeVisible();
+    
+    // Verify current values are populated
+    await expect(page.locator('input[name="name"]')).toHaveValue('Original Portfolio Name');
+    await expect(page.locator('textarea[name="description"]')).toHaveValue('Original description');
+    
+    // Update portfolio details
+    await page.fill('input[name="name"]', 'Updated Portfolio Name');
+    await page.fill('textarea[name="description"]', 'Updated description with more details');
+    
+    // Submit the update
+    await page.click('button[type="submit"]:has-text("Save")');
+    
+    // Should see updated name on the page
+    await expect(page.locator('h2:has-text("Updated Portfolio Name")')).toBeVisible();
+    
+    // Should see updated description
+    await expect(page.locator('text=Updated description with more details')).toBeVisible();
+    
+    // Reload the page to verify the update persisted
+    await page.reload();
+    
+    // Verify updated data is still there after reload
+    await expect(page.locator('h2:has-text("Updated Portfolio Name")')).toBeVisible();
+    await expect(page.locator('text=Updated description with more details')).toBeVisible();
+  });
 });

@@ -39,7 +39,9 @@ export default function PortfolioDetailPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Form state
   const [symbol, setSymbol] = useState('');
@@ -47,6 +49,10 @@ export default function PortfolioDetailPage() {
   const [pricePerUnit, setPricePerUnit] = useState('');
   const [transactionType, setTransactionType] = useState<'BUY' | 'SELL'>('BUY');
   const [transactionDate, setTransactionDate] = useState('');
+
+  // Edit form state
+  const [editName, setEditName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
 
   useEffect(() => {
     loadData();
@@ -131,6 +137,49 @@ export default function PortfolioDetailPage() {
     }
   };
 
+  const handleEditClick = () => {
+    if (portfolio) {
+      setEditName(portfolio.name);
+      setEditDescription(portfolio.description || '');
+      setIsEditDialogOpen(true);
+    }
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsUpdating(true);
+
+    try {
+      const { createClient } = await import('@/lib/supabase-browser');
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) return;
+
+      const res = await fetch(`/api/portfolios/${portfolioId}`, {
+        method: 'PATCH',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          name: editName,
+          description: editDescription
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setPortfolio(data.data);
+        setIsEditDialogOpen(false);
+      }
+    } catch (error) {
+      console.error('Update error:', error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const calculateTotal = () => {
     return transactions.reduce((total, tx) => {
       const price = tx.price_per_unit || tx.price || 0;
@@ -207,12 +256,20 @@ export default function PortfolioDetailPage() {
             <p className="text-gray-600">{portfolio.description || 'No description'}</p>
           </div>
           
-          <button 
-            onClick={() => setIsDialogOpen(true)}
-            className="px-4 py-2 bg-black text-white rounded"
-          >
-            + Add Transaction
-          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={handleEditClick}
+              className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
+            >
+              Edit Portfolio
+            </button>
+            <button 
+              onClick={() => setIsDialogOpen(true)}
+              className="px-4 py-2 bg-black text-white rounded"
+            >
+              + Add Transaction
+            </button>
+          </div>
         </div>
 
         <div className="mb-8 p-6 border rounded">
@@ -372,6 +429,56 @@ export default function PortfolioDetailPage() {
                   className="px-4 py-2 bg-black text-white rounded"
                 >
                   {isCreating ? 'Adding...' : 'Add Transaction'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Portfolio Dialog */}
+      {isEditDialogOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg w-full max-w-md">
+            <h3 className="text-xl font-bold mb-4">Edit Portfolio</h3>
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Portfolio Name</label>
+                <input
+                  name="name"
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border rounded"
+                  placeholder="My Portfolio"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <textarea
+                  name="description"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className="w-full px-3 py-2 border rounded"
+                  rows={3}
+                  placeholder="Optional description"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditDialogOpen(false)}
+                  className="px-4 py-2 border rounded"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdating}
+                  className="px-4 py-2 bg-black text-white rounded"
+                >
+                  {isUpdating ? 'Saving...' : 'Save'}
                 </button>
               </div>
             </form>
