@@ -123,6 +123,14 @@ A new user signs up, creates a portfolio, adds initial BUY transactions for seve
 - **PriceEvent**: symbol, price, change_24h_abs, change_24h_pct, received_at
 - **PortfolioValueSnapshot**: portfolio_id, total_value, captured_at (daily or event-triggered)
 
+### Supported Cryptocurrency Symbols (30 for MVP)
+**Top 10 by Market Cap**: BTC, ETH, USDT, BNB, SOL, USDC, XRP, ADA, AVAX, DOGE  
+**DeFi & Layer 1**: DOT, MATIC, LINK, UNI, ATOM, LTC, NEAR, APT, ARB, OP  
+**Meme & Popular**: SHIB, PEPE, WIF, BONK, FLOKI  
+**Emerging & Infrastructure**: SUI, SEI, INJ, TIA, RUNE
+
+**UI Display**: Horizontal auto-scrolling ticker strip at top of dashboard showing live prices with 24h % change (color-coded green/red), stale badge when data >30s old.
+
 
 ---
 

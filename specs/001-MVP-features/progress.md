@@ -1,20 +1,22 @@
 # MVP Feature Implementation Progress
 
-**Last Updated**: 2025-01-05 (T034, T081 completed)  
-**Overall Progress**: 72/88 tasks (82%)
+**Last Updated**: 2025-01-05 (T034, T081 completed - Tasks updated with T089-T092)  
+**Overall Progress**: 72/92 tasks (78%)
 
 ---
 
-## ⚠️ CORRECTION NOTICE
+## ⚠️ TASK DEFINITION CORRECTIONS
 
-**Previous Report**: 36/88 tasks (41%) - **INACCURATE**  
-**Actual Status**: 70/88 tasks (80%)
+**Previous Understanding**: T082 = "Price Ticker Component"  
+**Actual Task Definition**: T082 = "Loading states and skeleton loaders"
 
-**Major Findings**:
-- **Phase 4 was 82% complete, not 0%** - Git history shows 24 feature commits implementing all API endpoints
-- **All 15 contract tests written and passing** (100% contract test coverage per commit 9410a01)
-- **Phase 3 Foundation 100% complete** - All infrastructure utilities exist
-- **Phase 5 UI at 70%** - Major component refactoring completed (commit c2b15db)
+**NEW TASKS ADDED** (T089-T092):
+- **T089**: Build PriceTicker component (FR-009, FR-011, FR-012, FR-015)
+- **T090**: Build PortfolioValueChart component (FR-013, FR-016)
+- **T091**: Build Dashboard page with portfolio switcher (FR-024, FR-025)
+- **T092**: Add transaction filter controls (FR-023)
+
+**Total Tasks**: Increased from 88 → 92 tasks
 
 ---
 
@@ -168,7 +170,7 @@ app/api/charts/[symbol]/route.ts        (T072) ✅
 ---
 
 ## Phase 5: UI Components & Pages (React/Next.js) ⏳ IN PROGRESS
-**Status**: 8/10 tasks (80%)
+**Status**: 8/14 tasks (57%)
 
 ### UI Component Library
 - ✅ T074 Build Login page (/auth/login) *(app/auth/login/page.tsx)*
@@ -179,8 +181,13 @@ app/api/charts/[symbol]/route.ts        (T072) ✅
 - ✅ T079 Build Transaction History component *(app/portfolio/[id]/components/TransactionsTable.tsx - 81 lines)*
 - ✅ T080 Build Add Transaction form with SELL validation *(app/portfolio/[id]/components/AddTransactionDialog.tsx - 172 lines)*
 - ✅ **T081 Build Edit Portfolio dialog** *(app/portfolio/[id]/components/EditPortfolioDialog.tsx - 120 lines, E2E test passing)*
-- ❌ **T082 Build Price Ticker component with real-time updates**
-- ❌ **T083 Build Chart component with TradingView Lightweight Charts**
+- ❌ **T082 Implement loading states and skeleton loaders** *(components/ui/skeleton.tsx exists, needs integration)*
+- ❌ **T083 Implement error boundaries and toast notifications** *(app/error.tsx, components/ui/toaster.tsx)*
+- ❌ **T084 Implement stale price indicator logic** *(components/dashboard/PriceTickerPanel.tsx - depends on T089)*
+- ❌ **T089 Build PriceTicker component** *(NEW - components/dashboard/PriceTicker.tsx)*
+- ❌ **T090 Build PortfolioValueChart component** *(NEW - components/portfolio/PortfolioValueChart.tsx)*
+- ❌ **T091 Build Dashboard page integration** *(NEW - app/dashboard/page.tsx with portfolio switcher)*
+- ❌ **T092 Add transaction filter controls** *(NEW - app/portfolio/[id]/components/TransactionFilters.tsx)*
 
 **Component Refactoring** (commit: c2b15db):
 - Split monolithic 551-line portfolio detail page into 8 focused components
@@ -202,16 +209,33 @@ app/portfolio/[id]/lib/holdings.ts                   56 lines (calculations)
 
 ---
 
-## Remaining Work (16 tasks)
+## Remaining Work (20 tasks)
 
 ### Critical Path to MVP
 1. ✅ **T034**: Real-time updates E2E test - **COMPLETE**
 2. ✅ **T081**: Edit Portfolio dialog - **COMPLETE**
-3. **T082**: Build Price Ticker component with real-time updates ← **NEXT PRIORITY**
-4. **T083**: Build Chart component with TradingView Lightweight Charts
+3. **T082**: Loading states and skeleton loaders ← **Phase 5 Polish**
+4. **T083**: Error boundaries and toast notifications ← **Phase 5 Polish**
+5. **T084**: Stale price indicator logic ← **Depends on T089**
+6. **T089**: Build PriceTicker component ← **NEXT PRIORITY (FR-009, FR-011, FR-012, FR-015)**
+7. **T090**: Build PortfolioValueChart component ← **HIGH PRIORITY (FR-013, FR-016)**
+8. **T091**: Build Dashboard page with portfolio switcher ← **Depends on T089, T090**
+9. **T092**: Add transaction filter controls ← **LOW PRIORITY (FR-023)**
+
+### Quality & Polish Tasks (Phase 5)
+10. **T077**: Database indexes for performance
+11. **T078**: React Query caching strategy
+12. **T079**: Performance regression tests
+13. **T080**: Real-time latency test harness
+14. **T081**: Accessibility audit ← **COMPLETE**
+15. **T085**: Unit test coverage audit (≥80%)
+16. **T086**: Complexity refactoring
+17. **T087**: API documentation
+18. **T088**: E2E test completion
 
 ### Optional Enhancements
-5. **T064**: Bulk import transactions endpoint
+19. **T064**: Bulk import transactions endpoint
+20. **T074**: Supabase Edge Function for daily snapshots
 
 ---
 
@@ -282,9 +306,17 @@ a0c1d58 - fix: Remove invalid tw-animate-css import from globals.css
 
 ## Summary
 
-The project is **82% complete** with all critical infrastructure (Phases 1-3) and most core features (Phase 4) implemented. The backend is fully functional with 100% contract test coverage. The remaining work focuses on:
+The project is **78% complete (72/92 tasks)** with all critical infrastructure (Phases 1-3) and most core features (Phase 4) implemented. The backend is fully functional with 100% contract test coverage. 
 
-- **2 UI components** (price ticker, charts)
-- **1 optional endpoint** (bulk import)
+**CRITICAL FINDING**: Task audit revealed 4 missing UI component tasks (T089-T092) that are essential for fulfilling functional requirements FR-009, FR-011, FR-012, FR-013, FR-015, FR-016, FR-023, FR-024, FR-025.
 
-The codebase is production-ready for core portfolio tracking, with real-time price updates and advanced charting as the final polish items.
+### Remaining Work Breakdown:
+- **6 UI components** (T082-T084, T089-T092): Loading states, error handling, price ticker, charts, dashboard integration, filters
+- **8 Quality & Polish tasks** (T077-T080, T085-T088): Performance, accessibility, testing, documentation
+- **2 Optional enhancements** (T064, T074): Bulk import, edge functions
+
+The codebase is production-ready for core portfolio tracking. The remaining critical tasks focus on:
+1. **Real-time price display** (T089) - Fulfills FR-009, FR-011, FR-012, FR-015
+2. **Interactive charting** (T090) - Fulfills FR-013, FR-016
+3. **Dashboard integration** (T091) - Fulfills FR-024, FR-025
+4. **Transaction filtering** (T092) - Fulfills FR-023

@@ -271,13 +271,19 @@ supabase/                    # Supabase project files
    - Dashboard shell (layout, nav, portfolio selector)
    - Portfolio detail page (holdings table, chart, transactions)
    - Transaction forms (create, edit, bulk import)
-   - Price ticker panel + allocation chart
+   - **Price ticker component** (T089 - FR-009, FR-011, FR-012, FR-015)
+   - **Portfolio value chart component** (T090 - FR-013, FR-016)
+   - **Dashboard integration with portfolio switcher** (T091 - FR-024, FR-025)
+   - **Transaction filter controls** (T092 - FR-023)
    - Responsive mobile layout
 
 **Dependency Order**:
 - Database schema → Type generation → API routes → Services → UI components
 - Auth middleware → All protected endpoints
 - Price service → Holdings calculation → Portfolio valuation
+- Prices API (T070) → PriceTicker component (T089) → Dashboard page (T091)
+- Charts API (T072) → PortfolioValueChart component (T090) → Dashboard page (T091)
+- Transactions API with filters (T060) → TransactionFilters component (T092)
 - Calculation utilities (100% coverage) → Integration tests → E2E tests
 
 **Complexity Tracking**:

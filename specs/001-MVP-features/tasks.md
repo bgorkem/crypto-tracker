@@ -1324,6 +1324,88 @@ test('transaction form navigable via keyboard', async ({ page }) => {
 
 ---
 
+### UI Components (Missing from Original Plan)
+
+#### T089 [P] Build PriceTicker component with real-time price display
+**Path**: `components/dashboard/PriceTicker.tsx`  
+**Action**: Build horizontal auto-scrolling ticker strip displaying live prices for 30 fixed crypto symbols with 24h % change per FR-009, FR-011, FR-012, FR-015  
+**Requirements**: 
+- **Supported Symbols** (30 fixed): BTC, ETH, USDT, BNB, SOL, USDC, XRP, ADA, AVAX, DOGE, DOT, MATIC, LINK, UNI, ATOM, LTC, NEAR, APT, ARB, OP, SHIB, PEPE, WIF, BONK, FLOKI, SUI, SEI, INJ, TIA, RUNE
+- Use `useQuery` from React Query (30s staleTime configured in providers.tsx)
+- Call `/api/prices?symbols=BTC,ETH,SOL,...` endpoint with all 30 symbols
+- **UI Design**: Horizontal auto-scrolling ticker strip at top of dashboard
+- Display format: `🪙 BTC $43,521 +2.3%` per symbol
+- **Color coding**: Green for positive % change, red for negative, gray when stale
+- **Stale indicator**: Gray text + "Stale" badge when `Date.now() - receivedAt > 30000`
+- **Animation**: Smooth infinite scroll (CSS keyframes), pause on hover
+- Responsive design with Tailwind 4
+- Auto-refresh every 30s via React Query refetchInterval
+**Verify**: 
+- All 30 symbols display with current prices
+- 24h change percentages show with correct color coding
+- Component updates automatically every 30s
+- Stale badge appears when data >30s old
+- Ticker auto-scrolls smoothly and pauses on hover
+- E2E test T034 validates real-time updates
+
+---
+
+#### T090 [P] Build PortfolioValueChart component with interactive charting
+**Path**: `components/portfolio/PortfolioValueChart.tsx`  
+**Action**: Interactive value-over-time chart with 5 interval filters (24h, 7d, 30d, 90d, all) using Recharts or TradingView Lightweight Charts per FR-013, FR-016, NFR-009  
+**Requirements**:
+- Fetch data from `/api/portfolios/:id/chart?interval=24h` endpoint
+- Support 5 interval buttons: 24 hours, 7 days, 30 days, 90 days, All time
+- Chart must render in ≤500ms after data retrieval (NFR-009)
+- Responsive design with Tailwind 4
+- Accessibility: chart text alternative/data table fallback (NFR-006)
+- Show loading skeleton during data fetch
+**Verify**: 
+- Chart displays for all 5 intervals
+- Performance: renders ≤500ms after data load
+- Interval switching updates chart without full reload
+- Accessible with keyboard navigation
+
+---
+
+#### T091 [P] Build Dashboard page with portfolio switcher and panels
+**Path**: `app/dashboard/page.tsx`  
+**Action**: Complete dashboard layout integrating PriceTicker, PortfolioValueChart, portfolio switcher with consistent loading/empty/error states per FR-024, FR-025, NFR-001  
+**Requirements**:
+- Portfolio dropdown switcher (updates active portfolio without page reload per FR-025)
+- Integrate PriceTicker component (T089) in top panel
+- Integrate PortfolioValueChart component (T090) for selected portfolio
+- Holdings summary panel with link to portfolio detail
+- Consistent loading states using Skeleton component (FR-024)
+- Empty state guidance when no portfolios exist
+- Error boundaries for API failures
+- Dashboard interactive load ≤2s (NFR-001)
+**Verify**: 
+- Portfolio switching updates all panels without reload
+- All panels show loading states during data fetch
+- Empty state displays onboarding CTA
+- Dashboard loads ≤2s on warm cache
+
+---
+
+#### T092 [P] Add transaction filter controls to TransactionsTable
+**Path**: `app/portfolio/[id]/components/TransactionFilters.tsx`  
+**Action**: Build filter controls for symbol (dropdown) and date range (date picker) per FR-023  
+**Requirements**:
+- Symbol dropdown with "All Symbols" + list of unique symbols from portfolio
+- Date range picker (start/end dates)
+- Apply filters to `/api/portfolios/:id/transactions?symbol=BTC&startDate=...&endDate=...`
+- Clear filters button
+- Filter state persisted in URL query params
+- Responsive layout with Tailwind 4
+**Verify**: 
+- Filters update transaction list without page reload
+- URL reflects current filter state
+- Clear button resets all filters
+- Accessible keyboard navigation
+
+---
+
 ## Dependencies Graph
 
 ```
@@ -1331,7 +1413,7 @@ Foundation (T035-T048)
   ├─ Database (T035-T037) → Type Generation (T037)
   ├─ Auth Middleware (T039) → All Protected Endpoints (T054-T073)
   ├─ Sanitization (T040-T041) → Portfolio/Transaction Creation (T053, T059)
-  ├─ React Query (T042) → All Data Fetching Hooks (T078)
+  ├─ React Query (T042) → All Data Fetching Hooks (T078, T089)
   └─ Validation (T045) → All API Routes (T049-T076)
 
 Calculations (T065-T068) [100% Coverage Required]
@@ -1339,9 +1421,17 @@ Calculations (T065-T068) [100% Coverage Required]
 
 Price Service (T069-T071)
   └─ Holdings Calculation (T065) → Portfolio Valuation (T055)
+  └─ PriceTicker Component (T089) → Real-time updates
 
 Snapshots (T072-T074)
   └─ Portfolio Value Calc (T068) → Chart Data (T073)
+  └─ PortfolioValueChart Component (T090) → Visualization
+
+UI Components (T089-T092)
+  ├─ T089 (PriceTicker) → requires T070 (prices API), T084 (stale logic)
+  ├─ T090 (Chart) → requires T073 (charts API)
+  ├─ T091 (Dashboard) → requires T089, T090
+  └─ T092 (Filters) → requires T060 (transactions API with filters)
 
 Tests → Implementation Pairs:
   T007 → T049 (Register)
@@ -1349,6 +1439,7 @@ Tests → Implementation Pairs:
   T017 → T061 (Create Transaction)
   T024 → T065 (Holdings Calc)
   T032 → T088 (E2E Auth Flow)
+  T034 → T089 (E2E Real-time Updates & PriceTicker)
 ```
 
 ---
@@ -1379,7 +1470,14 @@ npm run test:unit -- __tests__/unit/calculations/*.test.ts
 # T049-T052 (Auth) + T054-T058 (Portfolios) + T060-T064 (Transactions) + T070-T071 (Prices) + T073 (Charts)
 ```
 
-**Wave 5 - Polish (After T076)**:
+**Wave 5 - UI Components (After T084)**:
+```bash
+# Build UI components in parallel
+# T089 (PriceTicker) + T090 (Chart) + T092 (Filters)
+# Then T091 (Dashboard) integrates T089 + T090
+```
+
+**Wave 6 - Polish (After T091)**:
 ```bash
 # Performance, accessibility, coverage in parallel
 # T077 (indexes) + T078 (caching) + T081 (a11y) + T082 (loading) + T083 (errors) + T085 (coverage) + T086 (refactor) + T087 (docs)
@@ -1400,6 +1498,25 @@ npm run test:unit -- __tests__/unit/calculations/*.test.ts
 - [x] Coverage target tasks included (T085: ≥80% overall, 100% calculations)
 - [x] Input sanitization implemented (T040-T041, integrated in T053, T059)
 - [x] Real-time update pathways covered by tests (T034, T080)
+- [x] UI components for all major features (T089-T092: PriceTicker, Chart, Dashboard, Filters)
+
+---
+
+## Notes
+
+- **TDD Workflow**: Phase 2 tests MUST ALL FAIL initially. Do NOT implement Phase 4 until all tests are failing.
+- **Complexity Budget**: Monitor ESLint complexity warnings after each task. Refactor immediately if >10.
+- **Constitution Gates**: Re-check after Phase 4 (all tests passing), Phase 5 (coverage ≥80%).
+- **Deployment**: After T088, run `vercel deploy` for production deployment.
+- **Moralis Rate Limits**: Monitor during T069-T071. May need to increase polling interval to 60s if free tier exceeded (40k requests/day).
+- **Commit Strategy**: Commit after each task or logical group (e.g., all contract tests, all API endpoints).
+- **UI Component Order**: T089-T090 can be built in parallel, T091 depends on both, T092 is independent.
+
+---
+
+**Estimated Total**: 92 tasks (88 original + 4 new UI components)  
+**Estimated Timeline**: 2-3 weeks (2 developers, 40 hours/week, 50% parallel execution)  
+**Constitution Compliance**: ✅ All gates validated in plan.md
 
 ---
 
