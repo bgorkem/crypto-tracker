@@ -118,33 +118,70 @@ export async function GET(
     .from('transactions')
     .select('*')
     .eq('portfolio_id', id)
-    .order('executed_at', { ascending: true });
+    .order('transaction_date', { ascending: true });
 
   // Calculate holdings from transactions
   const holdingsMap = new Map<string, {
     total_quantity: number;
     total_cost: number;
+    buys: Array<{ quantity: number; price: number }>;
   }>();
 
   (transactions as Transaction[] | null)?.forEach(tx => {
-    const current = holdingsMap.get(tx.symbol) || { total_quantity: 0, total_cost: 0 };
+    const current = holdingsMap.get(tx.symbol) || { 
+      total_quantity: 0, 
+      total_cost: 0,
+      buys: []
+    };
     
     if (tx.type === 'BUY') {
       current.total_quantity += tx.quantity;
       current.total_cost += tx.quantity * tx.price_per_unit;
+      current.buys.push({ quantity: tx.quantity, price: tx.price_per_unit });
     } else if (tx.type === 'SELL') {
+      // Use FIFO to remove sold units from cost basis
+      let remainingToSell = tx.quantity;
       current.total_quantity -= tx.quantity;
-      current.total_cost -= tx.quantity * tx.price_per_unit;
+      
+      while (remainingToSell > 0 && current.buys.length > 0) {
+        const oldestBuy = current.buys[0];
+        if (oldestBuy.quantity <= remainingToSell) {
+          // Sell entire lot
+          current.total_cost -= oldestBuy.quantity * oldestBuy.price;
+          remainingToSell -= oldestBuy.quantity;
+          current.buys.shift();
+        } else {
+          // Partially sell from this lot
+          current.total_cost -= remainingToSell * oldestBuy.price;
+          oldestBuy.quantity -= remainingToSell;
+          remainingToSell = 0;
+        }
+      }
     }
     
     holdingsMap.set(tx.symbol, current);
   });
 
-  // Filter out zero holdings and get market prices (mock for now)
+  // Get symbols from holdings
+  const symbols = Array.from(holdingsMap.keys()).filter(symbol => {
+    const data = holdingsMap.get(symbol)!;
+    return data.total_quantity > 0;
+  });
+
+  // Fetch current prices from cache
+  const { data: prices } = await supabase
+    .from('price_cache')
+    .select('symbol, price_usd, change_24h_pct')
+    .in('symbol', symbols.length > 0 ? symbols : ['']); // Avoid empty array error
+
+  const priceMap = new Map(prices?.map(p => [p.symbol, p]) || []);
+
+  // Calculate holdings with current prices
   const holdings = Array.from(holdingsMap.entries())
     .filter(([_, data]) => data.total_quantity > 0)
     .map(([symbol, data]) => {
-      const current_price = 50000; // Mock price - will integrate with Moralis API later
+      const priceData = priceMap.get(symbol);
+      const current_price = priceData?.price_usd || 0; // Use 0 if price not found
       const average_cost = data.total_cost / data.total_quantity;
       const market_value = data.total_quantity * current_price;
       const unrealized_pl = market_value - data.total_cost;
@@ -156,7 +193,7 @@ export async function GET(
         market_value,
         unrealized_pl,
         current_price,
-        price_change_24h_pct: null, // Mock - will integrate with Moralis API later
+        price_change_24h_pct: priceData?.change_24h_pct || null,
       };
     });
 
