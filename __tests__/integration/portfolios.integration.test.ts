@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { getTestUser } from '../helpers/test-user-pool';
+import { authenticateTestUser } from '../helpers/test-auth';
 
 /**
  * Integration Test: Portfolio Creation and Holdings Calculation
@@ -17,20 +19,10 @@ describe('Portfolio Holdings Integration', () => {
   let portfolioId: string;
 
   beforeEach(async () => {
-    // Register and login to get auth token
-    const registerResponse = await fetch(`${BASE_URL}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: `test-${Date.now()}@testuser.com`,
-        password: 'SecureP@ss123',
-      }),
-    });
-
-    if (registerResponse.ok) {
-      const registerData = await registerResponse.json();
-      authToken = registerData.data.session.access_token;
-    }
+    // Use test pool user to avoid rate limiting
+    const { email, password } = getTestUser();
+    const { token } = await authenticateTestUser(email, password);
+    authToken = token;
   });
 
   it('calculates holdings correctly after creating portfolio and transactions', async () => {
@@ -60,10 +52,10 @@ describe('Portfolio Holdings Integration', () => {
       },
       body: JSON.stringify({
         symbol: 'BTC',
-        type: 'BUY',
+        side: 'BUY',
         quantity: 1,
-        price_per_unit: 40000,
-        transaction_date: '2024-01-01T00:00:00Z',
+        price: 40000,
+        executed_at: '2024-01-01T00:00:00Z',
       }),
     });
 
@@ -78,10 +70,10 @@ describe('Portfolio Holdings Integration', () => {
       },
       body: JSON.stringify({
         symbol: 'BTC',
-        type: 'BUY',
+        side: 'BUY',
         quantity: 1,
-        price_per_unit: 50000,
-        transaction_date: '2024-01-02T00:00:00Z',
+        price: 50000,
+        executed_at: '2024-01-02T00:00:00Z',
       }),
     });
 
@@ -134,10 +126,10 @@ describe('Portfolio Holdings Integration', () => {
       },
       body: JSON.stringify({
         symbol: 'BTC',
-        type: 'BUY',
+        side: 'BUY',
         quantity: 2,
-        price_per_unit: 40000,
-        transaction_date: '2024-01-01T00:00:00Z',
+        price: 40000,
+        executed_at: '2024-01-01T00:00:00Z',
       }),
     });
 
@@ -150,10 +142,10 @@ describe('Portfolio Holdings Integration', () => {
       },
       body: JSON.stringify({
         symbol: 'BTC',
-        type: 'SELL',
+        side: 'SELL',
         quantity: 1,
-        price_per_unit: 50000,
-        transaction_date: '2024-01-02T00:00:00Z',
+        price: 50000,
+        executed_at: '2024-01-02T00:00:00Z',
       }),
     });
 

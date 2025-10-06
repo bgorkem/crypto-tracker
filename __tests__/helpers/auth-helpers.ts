@@ -5,34 +5,25 @@
  * in contract tests.
  */
 
+import { getTestUser } from './test-user-pool';
+import { authenticateTestUser } from './test-auth';
+
 const BASE_URL = 'http://localhost:3000';
 
 /**
  * Create a test user and return their auth token
+ * Uses test pool to avoid rate limiting
  * 
- * @param prefix - Email prefix (e.g., 'portfoliouser', 'transactionuser')
+ * @param _prefix - Optional prefix (ignored, kept for API compatibility)
  * @returns Object with email and auth token
  */
-export async function createTestUser(prefix: string = 'testuser'): Promise<{
+export async function createTestUser(_prefix: string = 'testuser'): Promise<{
   email: string;
   password: string;
   token: string;
 }> {
-  const email = `${prefix}-${Date.now()}@testuser.com`;
-  const password = 'TestPassword123!';
-
-  const response = await fetch(`${BASE_URL}/api/auth/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to create test user: ${response.status}`);
-  }
-
-  const data = await response.json();
-  const token = data.data.session.access_token;
+  const { email, password } = getTestUser();
+  const { token } = await authenticateTestUser(email, password);
 
   return { email, password, token };
 }

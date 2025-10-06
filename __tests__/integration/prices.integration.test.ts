@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { getTestUser } from '../helpers/test-user-pool';
+import { authenticateTestUser } from '../helpers/test-auth';
 
 /**
  * Integration Test: Real-time Price Updates
@@ -16,18 +18,10 @@ describe('Price Updates Integration', () => {
   let portfolioId: string;
 
   beforeEach(async () => {
-    // Setup: Register, login, create portfolio with transactions
-    const registerResponse = await fetch(`${BASE_URL}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: `test-${Date.now()}@testuser.com`,
-        password: 'SecureP@ss123',
-      }),
-    });
-
-    const registerData = await registerResponse.json();
-    authToken = registerData.data.session.access_token;
+    // Use test pool user to avoid rate limiting
+    const { email, password } = getTestUser();
+    const { token } = await authenticateTestUser(email, password);
+    authToken = token;
 
     const portfolioResponse = await fetch(`${BASE_URL}/api/portfolios`, {
       method: 'POST',
@@ -51,10 +45,10 @@ describe('Price Updates Integration', () => {
       },
       body: JSON.stringify({
         symbol: 'BTC',
-        type: 'BUY',
+        side: 'BUY',
         quantity: 1,
-        price_per_unit: 40000,
-        transaction_date: '2024-01-01T00:00:00Z',
+        price: 40000,
+        executed_at: '2024-01-01T00:00:00Z',
       }),
     });
   });
