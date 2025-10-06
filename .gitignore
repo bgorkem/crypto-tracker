@@ -40,3 +40,7 @@ next-env.d.ts
 /test-results/
 /playwright-report/
 /playwright/.cache/
+
+# Test artifacts
+test-diagnostic-run.log
+/tmp/dev-server.log
