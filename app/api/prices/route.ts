@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenPrices } from '@/lib/moralis';
+import { createAdminClient } from '@/lib/supabase';
 
 /**
  * GET /api/prices
@@ -36,8 +37,28 @@ export async function GET(request: NextRequest) {
   const symbols = symbolsParam.split(',').map(s => s.trim().toUpperCase());
 
   try {
+    // Create admin Supabase client for caching (service role can bypass RLS)
+    const adminClient = createAdminClient();
+
     // Fetch prices from Moralis
     const prices = await getTokenPrices(symbols);
+
+    // Update price cache in database using admin client
+    if (prices.length > 0) {
+      await adminClient
+        .from('price_cache')
+        .upsert(
+          prices.map(p => ({
+            symbol: p.symbol,
+            price_usd: p.price_usd,
+            market_cap: p.market_cap,
+            volume_24h: p.volume_24h,
+            change_24h_pct: p.change_24h_pct,
+            last_updated: p.last_updated,
+          })),
+          { onConflict: 'symbol' }
+        );
+    }
 
     return NextResponse.json(
       { data: prices },
