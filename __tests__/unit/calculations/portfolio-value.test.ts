@@ -4,7 +4,7 @@ import {
   calculateHoldings,
   type Transaction,
   type Price,
-} from '../../../src/lib/calculations';
+} from '@/lib/calculations';
 
 describe('calculatePortfolioValue', () => {
   it('calculates total portfolio value from multiple holdings', () => {

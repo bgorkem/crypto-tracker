@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   calculateCostBasis,
   type Transaction,
-} from '../../../src/lib/calculations';
+} from '@/lib/calculations';
 
 describe('calculateCostBasis', () => {
   it('calculates cost basis for full position SELL using FIFO', () => {

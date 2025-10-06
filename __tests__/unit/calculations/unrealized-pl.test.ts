@@ -4,7 +4,7 @@ import {
   calculateHoldings,
   type Transaction,
   type Price,
-} from '../../../src/lib/calculations';
+} from '@/lib/calculations';
 
 describe('calculateUnrealizedPL', () => {
   it('calculates unrealized profit for holdings in profit', () => {

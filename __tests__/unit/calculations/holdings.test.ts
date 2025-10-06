@@ -3,7 +3,7 @@ import {
   calculateHoldings,
   type Transaction,
   type Price,
-} from '../../../src/lib/calculations';
+} from '@/lib/calculations';
 
 describe('calculateHoldings', () => {
   it('calculates total quantity for BUY-only transactions', () => {
