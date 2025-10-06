@@ -48,6 +48,12 @@ The project uses the following technologies:
 
 ### Running Tests
 
+**One-time setup:**
+```bash
+# Initialize persistent test user pool
+npx tsx scripts/init-test-pool.ts
+```
+
 **Contract/Integration tests** require the dev server to be running:
 
 1. **Terminal 1** - Start dev server:
@@ -63,14 +69,21 @@ The project uses the following technologies:
    npm test -- --ui                            # Run with UI
    ```
 
+3. **After development** - Clean up test users:
+   ```bash
+   npm run test:cleanup  # Removes any leaked @testuser.com users
+   ```
+
 **Why separate terminals?**
 - Contract tests make real HTTP requests to `localhost:3000`
 - The server must be running with `TEST_MODE=true` (from `.env.local`)
 - This enables admin client for test user creation (bypasses email confirmation)
 
-**⚠️ IMPORTANT**: `TEST_MODE=true` should **NEVER** be set in production!
+**⚠️ IMPORTANT**: 
+- `TEST_MODE=true` should **NEVER** be set in production!
+- Always run `npm run test:cleanup` after manual testing to avoid rate limits
 
-See [docs/TESTING.md](docs/TESTING.md) for detailed testing documentation.
+See [docs/TESTING.md](docs/TESTING.md) and [docs/TEST-MAINTENANCE.md](docs/TEST-MAINTENANCE.md) for detailed documentation.
 
 ### Requirements
 To be detailed later ...
