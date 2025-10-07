@@ -30,11 +30,11 @@ export function UserAccountMenu({ user, onLogout }: UserAccountMenuProps) {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="relative h-10 w-10 rounded-full"
+          className="relative h-10 w-10 rounded-full p-0"
           aria-label="User account menu"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <User className="h-5 w-5" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+            <User className="h-6 w-6 text-muted-foreground" />
           </div>
         </Button>
       </DropdownMenuTrigger>
