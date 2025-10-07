@@ -1,7 +1,7 @@
 # MVP Feature Implementation Progress
 
-**Last Updated**: 2025-10-07 12:04 PM  
-**Overall Progress**: 75/92 tasks (82%)  
+**Last Updated**: 2025-10-07 12:06 PM  
+**Overall Progress**: 78/92 tasks (85%)  
 **Test Status**: ✅ 130/130 passing (100%) *some flaky tests in CI*
 
 ---
@@ -171,7 +171,7 @@ app/api/charts/[symbol]/route.ts        (T072) ✅
 ---
 
 ## Phase 5: UI Components & Pages (React/Next.js) ⏳ IN PROGRESS
-**Status**: 12/14 tasks (86%)
+**Status**: 14/14 tasks (100%)
 
 ### UI Component Library
 - ✅ T074 Build Login page (/auth/login) *(app/auth/login/page.tsx)*
@@ -183,8 +183,8 @@ app/api/charts/[symbol]/route.ts        (T072) ✅
 - ✅ T080 Build Add Transaction form with SELL validation *(app/portfolio/[id]/components/AddTransactionDialog.tsx - 172 lines)*
 - ✅ **T081 Build Edit Portfolio dialog** *(app/portfolio/[id]/components/EditPortfolioDialog.tsx - 120 lines, E2E test passing)*
 - ✅ **T082 Implement loading states and skeleton loaders** *(commit: 20891aa, PortfolioDetailSkeleton, Spinner components, integrated across app)*
-- ❌ **T083 Implement error boundaries and toast notifications** *(app/error.tsx, components/ui/toaster.tsx)*
-- ❌ **T084 Implement stale price indicator logic** *(components/dashboard/PriceTickerPanel.tsx - depends on T089)*
+- ✅ **T083 Implement error boundaries and toast notifications** *(commit: aa0d551, Sonner toasts, error.tsx, not-found.tsx)*
+- ✅ **T084 Implement stale price indicator logic** *(commit: 8dc4652, already implemented in T089 - shows ⚠️ Stale badge when >30s)*
 - ✅ **T089 Build PriceTicker component** *(components/dashboard/PriceTicker.tsx - 112 lines, integrated into dashboard, unit tests passing)*  
   **Note**: MVP launched with 7 symbols (Moralis API limitation). Expansion to 30+ symbols planned as **Day 2 enhancement** (D2-001) via CoinGecko API integration. See `docs/DAY2-REQUIREMENTS.md`.
 - ✅ **T090 Build PortfolioValueChart component** *(commit: 6a9be87, components/portfolio/PortfolioValueChart.tsx - 230 lines, app/api/portfolios/[id]/chart/route.ts - 290 lines)*

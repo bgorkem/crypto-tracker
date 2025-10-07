@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { PortfolioHeader } from "./components/PortfolioHeader";
 import { PortfolioStats } from "./components/PortfolioStats";
@@ -10,6 +10,7 @@ import { AddTransactionDialog } from "./components/AddTransactionDialog";
 import { EditPortfolioDialog } from "./components/EditPortfolioDialog";
 import { DeletePortfolioDialog } from "./components/DeletePortfolioDialog";
 import { PortfolioDetailSkeleton } from "./components/PortfolioDetailSkeleton";
+import { TransactionFilters, applyTransactionFilters, type TransactionFilter } from "./components/TransactionFilters";
 import { calculateHoldingsFromTransactions } from "./lib/holdings";
 
 interface Portfolio {
@@ -72,6 +73,12 @@ export default function PortfolioDetailPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [filters, setFilters] = useState<TransactionFilter>({
+    symbol: null,
+    type: 'ALL',
+    sortBy: 'date',
+    sortOrder: 'desc',
+  });
 
   useEffect(() => {
     loadPortfolioData(portfolioId, router).then(data => {
@@ -99,6 +106,17 @@ export default function PortfolioDetailPage() {
 
   const holdings = calculateHoldingsFromTransactions(transactions);
 
+  // Get unique symbols for filter dropdown
+  const uniqueSymbols = useMemo(() => {
+    const symbols = new Set(transactions.map(tx => tx.symbol));
+    return Array.from(symbols).sort();
+  }, [transactions]);
+
+  // Apply filters to transactions
+  const filteredTransactions = useMemo(() => {
+    return applyTransactionFilters(transactions, filters);
+  }, [transactions, filters]);
+
   if (isLoading) {
     return <PortfolioDetailSkeleton />;
   }
@@ -121,7 +139,16 @@ export default function PortfolioDetailPage() {
       <main className="container mx-auto px-4 py-8">
         <PortfolioStats transactions={transactions} />
         <HoldingsTable holdings={holdings} />
-        <TransactionsTable transactions={transactions} />
+        
+        {/* Transaction Filters */}
+        {transactions.length > 0 && (
+          <TransactionFilters
+            symbols={uniqueSymbols}
+            onFilterChange={setFilters}
+          />
+        )}
+        
+        <TransactionsTable transactions={filteredTransactions} />
       </main>
 
       <AddTransactionDialog
