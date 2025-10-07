@@ -1,8 +1,8 @@
 # MVP Feature Implementation Progress
 
-**Last Updated**: 2025-10-07 12:06 PM  
-**Overall Progress**: 78/92 tasks (85%)  
-**Test Status**: ✅ 130/130 passing (100%) *some flaky tests in CI*
+**Last Updated**: 2025-10-07 12:10 PM  
+**Overall Progress**: 79/92 tasks (86%)  
+**Test Status**: ✅ 130/130 passing (100%)
 
 ---
 
@@ -189,7 +189,7 @@ app/api/charts/[symbol]/route.ts        (T072) ✅
   **Note**: MVP launched with 7 symbols (Moralis API limitation). Expansion to 30+ symbols planned as **Day 2 enhancement** (D2-001) via CoinGecko API integration. See `docs/DAY2-REQUIREMENTS.md`.
 - ✅ **T090 Build PortfolioValueChart component** *(commit: 6a9be87, components/portfolio/PortfolioValueChart.tsx - 230 lines, app/api/portfolios/[id]/chart/route.ts - 290 lines)*
 - ✅ **T091 Build Dashboard page integration** *(commit: 5caf312, app/dashboard/page.tsx with portfolio switcher + chart, complexity: 10 ✓)*
-- ❌ **T092 Add transaction filter controls** *(NEW - app/portfolio/[id]/components/TransactionFilters.tsx)*
+- ✅ **T092 Add transaction filter controls** *(commit: b6c1643, TransactionFilters component with symbol/type/sort filters + reset)*
 
 **Component Refactoring** (commit: c2b15db):
 - Split monolithic 551-line portfolio detail page into 8 focused components
