@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { ButtonSpinner } from '@/components/ui/spinner';
 import {
   Dialog,
   DialogContent,
@@ -77,6 +78,7 @@ export function CreatePortfolioDialog({ onCreatePortfolio, isCreating }: CreateP
               Cancel
             </Button>
             <Button type="submit" disabled={isCreating}>
+              {isCreating && <ButtonSpinner />}
               {isCreating ? 'Creating...' : 'Create'}
             </Button>
           </div>

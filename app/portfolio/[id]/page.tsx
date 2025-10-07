@@ -9,6 +9,7 @@ import { TransactionsTable } from "./components/TransactionsTable";
 import { AddTransactionDialog } from "./components/AddTransactionDialog";
 import { EditPortfolioDialog } from "./components/EditPortfolioDialog";
 import { DeletePortfolioDialog } from "./components/DeletePortfolioDialog";
+import { PortfolioDetailSkeleton } from "./components/PortfolioDetailSkeleton";
 import { calculateHoldingsFromTransactions } from "./lib/holdings";
 
 interface Portfolio {
@@ -99,7 +100,7 @@ export default function PortfolioDetailPage() {
   const holdings = calculateHoldingsFromTransactions(transactions);
 
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return <PortfolioDetailSkeleton />;
   }
 
   if (!portfolio) {
