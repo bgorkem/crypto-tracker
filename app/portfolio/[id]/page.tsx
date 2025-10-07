@@ -170,7 +170,6 @@ export default function PortfolioDetailPage() {
       <PortfolioHeader
         name={portfolio.name}
         description={portfolio.description}
-        onBack={() => router.push('/dashboard')}
         onDelete={() => setIsDeleteDialogOpen(true)}
         onEdit={() => setIsEditDialogOpen(true)}
         onAddTransaction={() => setIsDialogOpen(true)}

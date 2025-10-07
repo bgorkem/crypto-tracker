@@ -1,12 +1,10 @@
 'use client';
 
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PriceTicker } from "@/components/dashboard/PriceTicker";
 import { CreatePortfolioDialog } from "@/components/dashboard/CreatePortfolioDialog";
 import { EmptyPortfolioState } from "@/components/dashboard/EmptyPortfolioState";
 import { PortfolioContent } from "@/components/dashboard/PortfolioContent";
-import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
@@ -51,7 +49,6 @@ async function createPortfolio(
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   
   const {
@@ -79,41 +76,9 @@ export default function DashboardPage() {
     }
   };
 
-  const handleLogout = async () => {
-    setIsLoggingOut(true);
-    try {
-      await supabase.auth.signOut();
-      window.location.href = '/auth/login';
-    } catch (error) {
-      console.error('Logout error:', error);
-      setIsLoggingOut(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <PriceTicker />
-      
-      <header className="border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Crypto Portfolio Tracker</h1>
-            <p className="text-sm text-muted-foreground">Track your cryptocurrency investments in real-time</p>
-          </div>
-          <nav className="flex gap-4">
-            <Link href="/dashboard">
-              <Button variant="ghost">Dashboard</Button>
-            </Link>
-            <Button 
-              variant="outline" 
-              onClick={handleLogout}
-              disabled={isLoggingOut}
-            >
-              {isLoggingOut ? 'Logging out...' : 'Logout'}
-            </Button>
-          </nav>
-        </div>
-      </header>
 
       <main className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">

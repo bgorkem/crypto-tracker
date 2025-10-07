@@ -5,18 +5,17 @@ export function PortfolioDetailSkeleton() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header Skeleton */}
-      <div className="border-b bg-card">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between mb-4">
-            <Skeleton className="h-8 w-24" /> {/* Back button */}
-            <div className="flex gap-2">
-              <Skeleton className="h-10 w-32" /> {/* Add Transaction */}
-              <Skeleton className="h-10 w-24" /> {/* Edit */}
-              <Skeleton className="h-10 w-24" /> {/* Delete */}
-            </div>
+      <div className="container mx-auto px-4 py-6 border-b">
+        <div className="flex items-center justify-between">
+          <div>
+            <Skeleton className="h-10 w-64 mb-2" /> {/* Portfolio name */}
+            <Skeleton className="h-5 w-96" /> {/* Description */}
           </div>
-          <Skeleton className="h-10 w-64 mb-2" /> {/* Portfolio name */}
-          <Skeleton className="h-5 w-96" /> {/* Description */}
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-32" /> {/* Delete */}
+            <Skeleton className="h-10 w-24" /> {/* Edit */}
+            <Skeleton className="h-10 w-40" /> {/* Add Transaction */}
+          </div>
         </div>
       </div>
 

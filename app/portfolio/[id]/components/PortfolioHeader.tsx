@@ -1,7 +1,6 @@
 interface PortfolioHeaderProps {
   name: string;
   description: string | null;
-  onBack: () => void;
   onDelete: () => void;
   onEdit: () => void;
   onAddTransaction: () => void;
@@ -10,23 +9,13 @@ interface PortfolioHeaderProps {
 export function PortfolioHeader({
   name,
   description,
-  onBack,
   onDelete,
   onEdit,
   onAddTransaction
 }: PortfolioHeaderProps) {
   return (
-    <>
-      <header className="border-b p-4">
-        <div className="container mx-auto px-4">
-          <button onClick={onBack} className="px-4 py-2 border rounded">
-            ← Back
-          </button>
-        </div>
-      </header>
-
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex items-center justify-between">
+    <div className="container mx-auto px-4 py-6 border-b">
+      <div className="flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold">{name}</h2>
             <p className="text-gray-600">{description || 'No description'}</p>
@@ -54,6 +43,5 @@ export function PortfolioHeader({
           </div>
         </div>
       </div>
-    </>
   );
 }
