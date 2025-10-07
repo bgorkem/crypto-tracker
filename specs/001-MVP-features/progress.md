@@ -1,7 +1,7 @@
 # MVP Feature Implementation Progress
 
-**Last Updated**: 2025-10-07 (Afternoon Session)  
-**Overall Progress**: 79/93 tasks (85%)  
+**Last Updated**: 2025-10-07 (Afternoon Session - Spec Kit Workflow)  
+**Overall Progress**: 79/97 tasks (81%)  
 **Test Status**: ✅ 130/130 passing (100%)
 
 ---
@@ -17,10 +17,20 @@
 - **T091**: Build Dashboard page with portfolio switcher (FR-024, FR-025) ✅
 - **T092**: Add transaction filter controls (FR-023) ✅
 
-**NEW TASK** (T097):
-- **T097**: Branding & layout components (Header, Footer, User Menu) 📋 SPEC CREATED
+**NEW REQUIREMENTS** (T093-T097):
+- **T093**: Create Footer component (FR-028) 📋 SPEC UPDATED
+- **T094**: Create UserAccountMenu component (FR-027, FR-030) 📋 SPEC UPDATED
+- **T095**: Create Header component (FR-026, FR-029) 📋 SPEC UPDATED
+- **T096**: Integrate Header/Footer into root layout (FR-026, FR-028) 📋 SPEC UPDATED
+- **T097**: Remove duplicate navigation elements (FR-026) 📋 SPEC UPDATED
 
-**Total Tasks**: Increased from 88 → 93 tasks
+**Spec Updates (Commit 462e12c)**:
+- Added FR-026 to FR-030 (header, footer, user menu requirements)
+- Added NFR-014 (layout consistency without shift)
+- Added acceptance scenarios 10-12 (branding/layout behavior)
+- All requirements testable and aligned with spec-kit format
+
+**Total Tasks**: Increased from 88 → 97 tasks
 
 ---
 
@@ -214,9 +224,9 @@ app/portfolio/[id]/lib/holdings.ts                   56 lines (calculations)
 
 ---
 
-## Remaining Work (14 tasks)
+## Remaining Work (18 tasks)
 
-### Critical Path to MVP
+### Critical Path to MVP - ALL UI FEATURES COMPLETE! ✅
 1. ✅ **T034**: Real-time updates E2E test - **COMPLETE**
 2. ✅ **T081**: Edit Portfolio dialog - **COMPLETE**
 3. ✅ **T082**: Loading states and skeleton loaders - **COMPLETE**
@@ -227,21 +237,22 @@ app/portfolio/[id]/lib/holdings.ts                   56 lines (calculations)
 8. ✅ **T091**: Build Dashboard page with portfolio switcher - **COMPLETE**
 9. ✅ **T092**: Add transaction filter controls - **COMPLETE**
 
-### New Requirements
-10. **T097**: Branding & layout components (Header, Footer, User Menu) ← **📋 SPEC CREATED** [specs/001-MVP-features/T097-branding-layout.md]
-7. **T090**: Build PortfolioValueChart component ← **HIGH PRIORITY (FR-013, FR-016)**
-8. **T091**: Build Dashboard page with portfolio switcher ← **Depends on T089 ✅, T090**
-9. **T092**: Add transaction filter controls ← **LOW PRIORITY (FR-023)**
+### New Requirements - Branding & Layout (FR-026 to FR-030)
+10. ❌ **T093**: Create Footer component
+11. ❌ **T094**: Create UserAccountMenu component  
+12. ❌ **T095**: Create Header component
+13. ❌ **T096**: Integrate Header/Footer into root layout
+14. ❌ **T097**: Remove duplicate navigation elements
 
 ### Quality & Polish Tasks (Phase 6)
-11. **T085**: Test coverage reports
-12. **T086**: Complexity audit
-13. **T087**: API documentation  
-14. **T088**: E2E test scenarios
+15. **T085**: Test coverage reports
+16. **T086**: Complexity audit
+17. **T087**: API documentation  
+18. **T088**: E2E test scenarios
 
 ### Optional Enhancements
-15. **T064**: Bulk import transactions endpoint
-16. **T074**: Supabase Edge Function for daily snapshots
+19. **T064**: Bulk import transactions endpoint
+20. **T074**: Supabase Edge Function for daily snapshots
 
 ---
 
