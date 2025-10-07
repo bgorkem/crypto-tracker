@@ -1,8 +1,8 @@
 # MVP Feature Implementation Progress
 
-**Last Updated**: 2025-10-07 11:38 AM  
-**Overall Progress**: 74/92 tasks (80%)  
-**Test Status**: ✅ 130/130 passing (100%)
+**Last Updated**: 2025-10-07 12:04 PM  
+**Overall Progress**: 75/92 tasks (82%)  
+**Test Status**: ✅ 130/130 passing (100%) *some flaky tests in CI*
 
 ---
 
@@ -171,7 +171,7 @@ app/api/charts/[symbol]/route.ts        (T072) ✅
 ---
 
 ## Phase 5: UI Components & Pages (React/Next.js) ⏳ IN PROGRESS
-**Status**: 11/14 tasks (79%)
+**Status**: 12/14 tasks (86%)
 
 ### UI Component Library
 - ✅ T074 Build Login page (/auth/login) *(app/auth/login/page.tsx)*
@@ -182,7 +182,7 @@ app/api/charts/[symbol]/route.ts        (T072) ✅
 - ✅ T079 Build Transaction History component *(app/portfolio/[id]/components/TransactionsTable.tsx - 81 lines)*
 - ✅ T080 Build Add Transaction form with SELL validation *(app/portfolio/[id]/components/AddTransactionDialog.tsx - 172 lines)*
 - ✅ **T081 Build Edit Portfolio dialog** *(app/portfolio/[id]/components/EditPortfolioDialog.tsx - 120 lines, E2E test passing)*
-- ❌ **T082 Implement loading states and skeleton loaders** *(components/ui/skeleton.tsx exists, needs integration)*
+- ✅ **T082 Implement loading states and skeleton loaders** *(commit: 20891aa, PortfolioDetailSkeleton, Spinner components, integrated across app)*
 - ❌ **T083 Implement error boundaries and toast notifications** *(app/error.tsx, components/ui/toaster.tsx)*
 - ❌ **T084 Implement stale price indicator logic** *(components/dashboard/PriceTickerPanel.tsx - depends on T089)*
 - ✅ **T089 Build PriceTicker component** *(components/dashboard/PriceTicker.tsx - 112 lines, integrated into dashboard, unit tests passing)*  
