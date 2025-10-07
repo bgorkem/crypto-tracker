@@ -118,6 +118,8 @@ git push origin main
 **Build Command**: `npm run build` (auto-detected)  
 **Output Directory**: `.next` (auto-detected)
 
+**Note**: The project includes `vercel.json` and `.npmrc` files to handle React 19 peer dependencies automatically.
+
 ### 3.3 Add Environment Variables
 
 Click **"Environment Variables"** and add:
