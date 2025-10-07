@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 
 interface UserAccountMenuProps {
   user: {
@@ -19,9 +19,6 @@ interface UserAccountMenuProps {
 }
 
 export function UserAccountMenu({ user, onLogout }: UserAccountMenuProps) {
-  // Get first letter of email for avatar
-  const avatarLetter = user.email.charAt(0).toUpperCase();
-
   const handleLogout = async () => {
     if (onLogout) {
       await onLogout();
@@ -37,7 +34,7 @@ export function UserAccountMenu({ user, onLogout }: UserAccountMenuProps) {
           aria-label="User account menu"
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <span className="text-sm font-medium">{avatarLetter}</span>
+            <User className="h-5 w-5" />
           </div>
         </Button>
       </DropdownMenuTrigger>
