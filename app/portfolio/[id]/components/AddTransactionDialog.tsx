@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
+import { toast } from 'sonner';
 
 interface Transaction {
   id: string;
@@ -67,6 +68,7 @@ export function AddTransactionDialog({
       if (res.ok) {
         const responseData = await res.json();
         onSuccess(responseData.data);
+        toast.success('Transaction added successfully!');
         onClose();
         
         // Reset form
@@ -75,9 +77,12 @@ export function AddTransactionDialog({
         setPricePerUnit('');
         setTransactionType('BUY');
         setTransactionDate('');
+      } else {
+        toast.error('Failed to add transaction. Please try again.');
       }
     } catch (error) {
       console.error('Create error:', error);
+      toast.error('Failed to add transaction. Please try again.');
     } finally {
       setIsCreating(false);
     }

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { ButtonSpinner } from '@/components/ui/spinner';
 import {
@@ -22,10 +23,15 @@ export function CreatePortfolioDialog({ onCreatePortfolio, isCreating }: CreateP
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onCreatePortfolio(name, description);
-    setIsOpen(false);
-    setName('');
-    setDescription('');
+    try {
+      await onCreatePortfolio(name, description);
+      toast.success('Portfolio created successfully!');
+      setIsOpen(false);
+      setName('');
+      setDescription('');
+    } catch {
+      toast.error('Failed to create portfolio. Please try again.');
+    }
   };
 
   return (
