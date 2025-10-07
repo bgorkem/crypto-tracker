@@ -41,11 +41,11 @@ export function usePortfolios() {
         }
 
         const data = await response.json();
-        setPortfolios(data.data);
+        setPortfolios(data.data.portfolios || []);
         
         // Auto-select first portfolio
-        if (data.data.length > 0) {
-          setSelectedPortfolioId(data.data[0].id);
+        if (data.data.portfolios && data.data.portfolios.length > 0) {
+          setSelectedPortfolioId(data.data.portfolios[0].id);
         }
       } catch (error) {
         console.error('Error fetching portfolios:', error);

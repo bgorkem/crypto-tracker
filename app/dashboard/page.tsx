@@ -11,6 +11,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { usePortfolios } from "./hooks/usePortfolios";
+import { toast } from "sonner";
 
 interface Portfolio {
   id: string;
@@ -67,10 +68,12 @@ export default function DashboardPage() {
     setIsCreating(true);
     try {
       const newPortfolio = await createPortfolio(supabase, name, description);
-      setPortfolios(prev => [...prev, newPortfolio]);
+      setPortfolios(prev => [...(prev || []), newPortfolio]);
       setSelectedPortfolioId(newPortfolio.id);
+      toast.success('Portfolio created successfully');
     } catch (error) {
       console.error('Error creating portfolio:', error);
+      toast.error('Failed to create portfolio');
     } finally {
       setIsCreating(false);
     }
