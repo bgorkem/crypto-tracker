@@ -44,3 +44,4 @@ next-env.d.ts
 # Test artifacts
 test-diagnostic-run.log
 /tmp/dev-server.log
+node_modules
