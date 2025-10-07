@@ -1,0 +1,121 @@
+{
+    "$schema": "https://json-schema.org/draft-07/schema#",
+    "title": "Supabase Configuration",
+    "type": "object",
+    "properties": {
+        "project_id": {
+            "type": "string",
+            "description": "Supabase project ID"
+        },
+        "api": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "port": {
+                    "type": "integer",
+                    "default": 54321
+                }
+            }
+        },
+        "db": {
+            "type": "object",
+            "properties": {
+                "port": {
+                    "type": "integer",
+                    "default": 54322
+                },
+                "shadow_port": {
+                    "type": "integer",
+                    "default": 54320
+                },
+                "major_version": {
+                    "type": "integer",
+                    "default": 15
+                }
+            }
+        },
+        "studio": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "port": {
+                    "type": "integer",
+                    "default": 54323
+                }
+            }
+        },
+        "auth": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "site_url": {
+                    "type": "string",
+                    "default": "http://localhost:3000"
+                },
+                "additional_redirect_urls": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": [
+                        "http://localhost:3000/auth/callback"
+                    ]
+                },
+                "jwt_expiry": {
+                    "type": "integer",
+                    "default": 3600
+                },
+                "enable_signup": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "email": {
+                    "type": "object",
+                    "properties": {
+                        "enable_signup": {
+                            "type": "boolean",
+                            "default": true
+                        },
+                        "double_confirm_changes": {
+                            "type": "boolean",
+                            "default": true
+                        },
+                        "enable_confirmations": {
+                            "type": "boolean",
+                            "default": true
+                        }
+                    }
+                },
+                "external": {
+                    "type": "object",
+                    "properties": {
+                        "google": {
+                            "type": "object",
+                            "properties": {
+                                "enabled": {
+                                    "type": "boolean",
+                                    "default": true
+                                },
+                                "client_id": {
+                                    "type": "string"
+                                },
+                                "secret": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
