@@ -1,7 +1,7 @@
 # MVP Feature Implementation Progress
 
-**Last Updated**: 2025-10-07 (Morning status review)  
-**Overall Progress**: 73/92 tasks (79%)  
+**Last Updated**: 2025-10-07 11:38 AM  
+**Overall Progress**: 74/92 tasks (80%)  
 **Test Status**: ✅ 130/130 passing (100%)
 
 ---
@@ -12,9 +12,9 @@
 **Actual Task Definition**: T082 = "Loading states and skeleton loaders"
 
 **NEW TASKS ADDED** (T089-T092):
-- **T089**: Build PriceTicker component (FR-009, FR-011, FR-012, FR-015)
-- **T090**: Build PortfolioValueChart component (FR-013, FR-016)
-- **T091**: Build Dashboard page with portfolio switcher (FR-024, FR-025)
+- **T089**: Build PriceTicker component (FR-009, FR-011, FR-012, FR-015) ✅
+- **T090**: Build PortfolioValueChart component (FR-013, FR-016) ✅
+- **T091**: Build Dashboard page with portfolio switcher (FR-024, FR-025) ✅
 - **T092**: Add transaction filter controls (FR-023)
 
 **Total Tasks**: Increased from 88 → 92 tasks
@@ -171,7 +171,7 @@ app/api/charts/[symbol]/route.ts        (T072) ✅
 ---
 
 ## Phase 5: UI Components & Pages (React/Next.js) ⏳ IN PROGRESS
-**Status**: 9/14 tasks (64%)
+**Status**: 11/14 tasks (79%)
 
 ### UI Component Library
 - ✅ T074 Build Login page (/auth/login) *(app/auth/login/page.tsx)*
@@ -187,8 +187,8 @@ app/api/charts/[symbol]/route.ts        (T072) ✅
 - ❌ **T084 Implement stale price indicator logic** *(components/dashboard/PriceTickerPanel.tsx - depends on T089)*
 - ✅ **T089 Build PriceTicker component** *(components/dashboard/PriceTicker.tsx - 112 lines, integrated into dashboard, unit tests passing)*  
   **Note**: MVP launched with 7 symbols (Moralis API limitation). Expansion to 30+ symbols planned as **Day 2 enhancement** (D2-001) via CoinGecko API integration. See `docs/DAY2-REQUIREMENTS.md`.
-- ❌ **T090 Build PortfolioValueChart component** *(NEW - components/portfolio/PortfolioValueChart.tsx)*
-- ❌ **T091 Build Dashboard page integration** *(NEW - app/dashboard/page.tsx with portfolio switcher)*
+- ✅ **T090 Build PortfolioValueChart component** *(commit: 6a9be87, components/portfolio/PortfolioValueChart.tsx - 230 lines, app/api/portfolios/[id]/chart/route.ts - 290 lines)*
+- ✅ **T091 Build Dashboard page integration** *(commit: 5caf312, app/dashboard/page.tsx with portfolio switcher + chart, complexity: 10 ✓)*
 - ❌ **T092 Add transaction filter controls** *(NEW - app/portfolio/[id]/components/TransactionFilters.tsx)*
 
 **Component Refactoring** (commit: c2b15db):
