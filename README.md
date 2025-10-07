@@ -85,5 +85,50 @@ npx tsx scripts/init-test-pool.ts
 
 See [docs/TESTING.md](docs/TESTING.md) and [docs/TEST-MAINTENANCE.md](docs/TEST-MAINTENANCE.md) for detailed documentation.
 
+## 🚀 Production Deployment
+
+### Quick Deploy to Vercel (10 minutes)
+
+**Prerequisites:**
+- GitHub account
+- Vercel account (free tier works)
+- Production Supabase project
+- Moralis API key
+
+**Steps:**
+
+1. **Push to GitHub**:
+   ```bash
+   git push origin main
+   ```
+
+2. **Deploy on Vercel**:
+   - Go to https://vercel.com
+   - Import your GitHub repository
+   - Add environment variables (see below)
+   - Deploy!
+
+3. **Configure Supabase**:
+   - Update Site URL with your Vercel URL
+   - Enable email confirmation
+   - Configure SMTP for production emails
+
+**Full deployment guide**: See [DEPLOYMENT-CHECKLIST.md](./DEPLOYMENT-CHECKLIST.md) for step-by-step instructions.
+
+**Detailed documentation**: See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) for comprehensive guide including email setup, custom domains, and troubleshooting.
+
+### Environment Variables for Production
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=<your-supabase-url>
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-anon-key>
+SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
+MORALIS_API_KEY=<your-moralis-key>
+NODE_ENV=production
+NEXT_PUBLIC_APP_URL=<your-vercel-url>
+```
+
+**⚠️ IMPORTANT**: Never set `TEST_MODE=true` in production!
+
 ### Requirements
 To be detailed later ...
