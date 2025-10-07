@@ -61,6 +61,9 @@ A new user signs up, creates a portfolio, adds initial BUY transactions for seve
 7. **Given** a user deletes a transaction, **When** deletion succeeds, **Then** derived holdings and chart data are recalculated and displayed.
 8. **Given** a user with multiple portfolios, **When** they switch the active portfolio, **Then** charts, tables, and metrics reflect the new selection with loading feedback.
 9. **Given** a price feed outage, **When** the feed is unreachable, **Then** the dashboard shows a stale indicator and last-updated timestamp remains unchanged.
+10. **Given** a logged-in user on any page (dashboard, portfolio detail, auth), **When** they view the page, **Then** a consistent header with logo and user account menu is displayed, and footer with app info is shown.
+11. **Given** a logged-in user, **When** they click their user avatar in the header, **Then** a dropdown shows their email and logout option.
+12. **Given** a logged-in user, **When** they click logout in the account menu, **Then** they are logged out and redirected to the login page.
 
 ### Edge Cases
 - SELL quantity > current holding → validation error, no mutation.
@@ -100,6 +103,11 @@ A new user signs up, creates a portfolio, adds initial BUY transactions for seve
 - **FR-023**: System MUST provide filtering by asset symbol and date range for transactions.
 - **FR-024**: System MUST provide consistent loading, empty, error states for dashboard panels.
 - **FR-025**: System MUST support portfolio switching without full page reload (state preservation for session).
+- **FR-026**: System MUST display consistent header with application logo and navigation across all pages (auth, dashboard, portfolio detail).
+- **FR-027**: System MUST display user account menu in header when authenticated, showing user email and logout action.
+- **FR-028**: System MUST display footer with application information and links across all pages.
+- **FR-029**: Header logo MUST navigate to dashboard when user is authenticated, or landing page when not authenticated.
+- **FR-030**: User account menu MUST be accessible via keyboard navigation and display user avatar with email first letter.
 
 ### Non-Functional / Quality Requirements
 - **NFR-001**: Dashboard interactive load ≤ 2s (median network conditions, warm cache).
@@ -115,6 +123,7 @@ A new user signs up, creates a portfolio, adds initial BUY transactions for seve
 - **NFR-011**: Error paths (feed outages, validation errors) must surface actionable guidance.
 - **NFR-012**: Logging includes correlation IDs for user actions and price update batches.
 - **NFR-013**: All free-text user inputs (portfolio name, description, transaction notes) MUST be sanitized to prevent XSS attacks and SQL injection.
+- **NFR-014**: Header and footer MUST maintain consistent layout across all pages without layout shift during authentication state changes.
 
 ### Key Entities *(include if feature involves data)*
 - **User**: id, email, auth_provider, created_at

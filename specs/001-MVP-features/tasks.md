@@ -1406,6 +1406,115 @@ test('transaction form navigable via keyboard', async ({ page }) => {
 
 ---
 
+#### T093 [P] Create Footer component
+**Path**: `components/layout/Footer.tsx`  
+**Action**: Build application footer with consistent branding per FR-028  
+**Requirements**:
+- Display app name "CryptoTracker" with copyright year
+- Links: Privacy Policy, Terms of Service, Documentation (placeholder hrefs)
+- Responsive layout (horizontal on desktop, stacked on mobile)
+- Tailwind 4 styling consistent with design system
+- Optional: Social media icons/links
+**Verify**:
+- Footer appears on all pages (auth, dashboard, portfolio)
+- Links are accessible via keyboard
+- Responsive layout adapts to screen size
+
+---
+
+#### T094 [P] Create UserAccountMenu component
+**Path**: `components/layout/UserAccountMenu.tsx`  
+**Action**: Build user account dropdown menu per FR-027, FR-030  
+**Requirements**:
+- Uses shadcn DropdownMenu component
+- Avatar displays first letter of user email
+- Dropdown shows user email and logout button
+- Keyboard accessible (Tab, Enter, Escape)
+- Click outside to close
+- Logout triggers auth logout and redirects to /auth/login
+**Verify**:
+- Avatar shows correct letter from email
+- Email displays correctly in dropdown
+- Logout works and redirects
+- Keyboard navigation functional
+- Dropdown closes on outside click
+
+---
+
+#### T095 [P] Create Header component
+**Path**: `components/layout/Header.tsx`  
+**Action**: Build application header with logo and navigation per FR-026, FR-029  
+**Requirements**:
+- Logo: ₿ symbol in circle + "CryptoTracker" text
+- Logo links to /dashboard (if authenticated) or / (if not)
+- Navigation links: "Dashboard" (only when authenticated)
+- UserAccountMenu on right (only when authenticated)
+- "Sign In" and "Get Started" buttons (only when not authenticated)
+- Detect auth state via props or context
+- Responsive layout (mobile-friendly)
+- Uses Tailwind 4 for styling
+- Border-bottom separator
+**Props**:
+```typescript
+interface HeaderProps {
+  user?: { email: string } | null;
+  onLogout?: () => Promise<void>;
+}
+```
+**Verify**:
+- Logo navigation works correctly based on auth state
+- User menu appears only when authenticated
+- Auth buttons appear only when not authenticated
+- Mobile responsive
+- No layout shift during auth state changes (NFR-014)
+
+---
+
+#### T096 Integrate Header and Footer into root layout
+**Path**: `app/layout.tsx`  
+**Action**: Add Header and Footer to root layout for all pages per FR-026, FR-028  
+**Requirements**:
+- Import Header and Footer components
+- Fetch auth state (Supabase session)
+- Pass user data to Header component
+- Implement onLogout handler
+- Wrap children with Header (top) and Footer (bottom)
+- Ensure no layout shift during auth load
+**Structure**:
+```tsx
+<html>
+  <body>
+    <Header user={user} onLogout={handleLogout} />
+    {children}
+    <Footer />
+  </body>
+</html>
+```
+**Verify**:
+- Header and Footer appear on all pages
+- Auth state loads without layout shift
+- Logout functionality works from all pages
+- Tests still passing
+
+---
+
+#### T097 Update dashboard and portfolio pages to remove duplicate navigation
+**Path**: `app/dashboard/page.tsx`, `app/portfolio/[id]/components/PortfolioHeader.tsx`  
+**Action**: Remove duplicate logout buttons and navigation now handled by Header  
+**Requirements**:
+- Dashboard: Remove standalone logout button
+- Portfolio page: Remove "Back" button from PortfolioHeader (navigation via Header)
+- Keep portfolio-specific actions (Edit, Delete, Add Transaction)
+- Ensure no broken functionality
+- Update E2E tests if needed
+**Verify**:
+- No duplicate navigation elements
+- All functionality still works
+- E2E tests passing
+- Visual consistency across pages
+
+---
+
 ## Dependencies Graph
 
 ```
@@ -1432,6 +1541,13 @@ UI Components (T089-T092)
   ├─ T090 (Chart) → requires T073 (charts API)
   ├─ T091 (Dashboard) → requires T089, T090
   └─ T092 (Filters) → requires T060 (transactions API with filters)
+
+Layout Components (T093-T097)
+  ├─ T093 (Footer) [P] → standalone component
+  ├─ T094 (UserAccountMenu) [P] → requires shadcn DropdownMenu
+  ├─ T095 (Header) → requires T094 (UserAccountMenu)
+  ├─ T096 (Root Layout Integration) → requires T093, T095
+  └─ T097 (Remove Duplicates) → requires T096
 
 Tests → Implementation Pairs:
   T007 → T049 (Register)
