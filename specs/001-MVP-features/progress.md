@@ -1,12 +1,12 @@
 # MVP Feature Implementation Progress
 
-**Last Updated**: 2025-10-07 12:10 PM  
-**Overall Progress**: 79/92 tasks (86%)  
+**Last Updated**: 2025-10-07 (Afternoon Session)  
+**Overall Progress**: 79/93 tasks (85%)  
 **Test Status**: ✅ 130/130 passing (100%)
 
 ---
 
-## ⚠️ TASK DEFINITION CORRECTIONS
+## ⚠️ TASK DEFINITION CORRECTIONS & ADDITIONS
 
 **Previous Understanding**: T082 = "Price Ticker Component"  
 **Actual Task Definition**: T082 = "Loading states and skeleton loaders"
@@ -15,9 +15,12 @@
 - **T089**: Build PriceTicker component (FR-009, FR-011, FR-012, FR-015) ✅
 - **T090**: Build PortfolioValueChart component (FR-013, FR-016) ✅
 - **T091**: Build Dashboard page with portfolio switcher (FR-024, FR-025) ✅
-- **T092**: Add transaction filter controls (FR-023)
+- **T092**: Add transaction filter controls (FR-023) ✅
 
-**Total Tasks**: Increased from 88 → 92 tasks
+**NEW TASK** (T097):
+- **T097**: Branding & layout components (Header, Footer, User Menu) 📋 SPEC CREATED
+
+**Total Tasks**: Increased from 88 → 93 tasks
 
 ---
 
@@ -211,33 +214,34 @@ app/portfolio/[id]/lib/holdings.ts                   56 lines (calculations)
 
 ---
 
-## Remaining Work (20 tasks)
+## Remaining Work (14 tasks)
 
 ### Critical Path to MVP
 1. ✅ **T034**: Real-time updates E2E test - **COMPLETE**
 2. ✅ **T081**: Edit Portfolio dialog - **COMPLETE**
-3. **T082**: Loading states and skeleton loaders ← **Phase 5 Polish**
-4. **T083**: Error boundaries and toast notifications ← **Phase 5 Polish**
-5. **T084**: Stale price indicator logic ← **Depends on T089 ✅**
-6. ✅ **T089**: Build PriceTicker component ← **COMPLETED**
+3. ✅ **T082**: Loading states and skeleton loaders - **COMPLETE**
+4. ✅ **T083**: Error boundaries and toast notifications - **COMPLETE**
+5. ✅ **T084**: Stale price indicator logic - **COMPLETE**
+6. ✅ **T089**: Build PriceTicker component - **COMPLETE**
+7. ✅ **T090**: Build PortfolioValueChart component - **COMPLETE**
+8. ✅ **T091**: Build Dashboard page with portfolio switcher - **COMPLETE**
+9. ✅ **T092**: Add transaction filter controls - **COMPLETE**
+
+### New Requirements
+10. **T097**: Branding & layout components (Header, Footer, User Menu) ← **📋 SPEC CREATED** [specs/001-MVP-features/T097-branding-layout.md]
 7. **T090**: Build PortfolioValueChart component ← **HIGH PRIORITY (FR-013, FR-016)**
 8. **T091**: Build Dashboard page with portfolio switcher ← **Depends on T089 ✅, T090**
 9. **T092**: Add transaction filter controls ← **LOW PRIORITY (FR-023)**
 
-### Quality & Polish Tasks (Phase 5)
-10. **T077**: Database indexes for performance
-11. **T078**: React Query caching strategy
-12. **T079**: Performance regression tests
-13. **T080**: Real-time latency test harness
-14. **T081**: Accessibility audit ← **COMPLETE**
-15. **T085**: Unit test coverage audit (≥80%)
-16. **T086**: Complexity refactoring
-17. **T087**: API documentation
-18. **T088**: E2E test completion
+### Quality & Polish Tasks (Phase 6)
+11. **T085**: Test coverage reports
+12. **T086**: Complexity audit
+13. **T087**: API documentation  
+14. **T088**: E2E test scenarios
 
 ### Optional Enhancements
-19. **T064**: Bulk import transactions endpoint
-20. **T074**: Supabase Edge Function for daily snapshots
+15. **T064**: Bulk import transactions endpoint
+16. **T074**: Supabase Edge Function for daily snapshots
 
 ---
 
