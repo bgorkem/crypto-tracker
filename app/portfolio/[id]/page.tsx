@@ -69,6 +69,7 @@ export default function PortfolioDetailPage() {
   
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [currentPrices, setCurrentPrices] = useState<Map<string, number>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -90,6 +91,29 @@ export default function PortfolioDetailPage() {
     });
   }, [portfolioId, router]);
 
+  // Fetch current prices when transactions change
+  useEffect(() => {
+    const fetchPrices = async () => {
+      if (transactions.length === 0) return;
+
+      const symbols = Array.from(new Set(transactions.map(tx => tx.symbol)));
+      const { createClient } = await import('@/lib/supabase-browser');
+      const supabase = createClient();
+      
+      const { data: prices } = await supabase
+        .from('price_cache')
+        .select('symbol, price_usd')
+        .in('symbol', symbols);
+
+      if (prices) {
+        const priceMap = new Map(prices.map((p: { symbol: string; price_usd: number }) => [p.symbol, p.price_usd]));
+        setCurrentPrices(priceMap);
+      }
+    };
+
+    fetchPrices();
+  }, [transactions]);
+
   const handleTransactionSuccess = (newTransaction: Transaction) => {
     setTransactions(prev => [newTransaction, ...prev]);
   };
@@ -104,7 +128,23 @@ export default function PortfolioDetailPage() {
     router.push('/dashboard');
   };
 
-  const holdings = calculateHoldingsFromTransactions(transactions);
+  // Calculate holdings with current market prices
+  const holdings = useMemo(() => {
+    const baseHoldings = calculateHoldingsFromTransactions(transactions);
+    
+    // Update market values with current prices
+    return baseHoldings.map(holding => {
+      const currentPrice = currentPrices.get(holding.symbol) || holding.averageCost;
+      const marketValue = holding.totalQuantity * currentPrice;
+      const unrealizedPL = marketValue - (holding.totalQuantity * holding.averageCost);
+      
+      return {
+        ...holding,
+        marketValue,
+        unrealizedPL,
+      };
+    });
+  }, [transactions, currentPrices]);
 
   // Get unique symbols for filter dropdown
   const uniqueSymbols = useMemo(() => {
