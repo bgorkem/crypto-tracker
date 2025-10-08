@@ -17,7 +17,11 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { calculateHistoricalValue } from '../lib/calculations';
+import { calculateHoldings, calculatePortfolioValue, type Transaction } from '../lib/calculations';
+
+//load dotenv to load from env.local
+import dotenv from 'dotenv';
+dotenv.config({path: '.env.local'});
 
 // Load environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -43,6 +47,10 @@ interface Snapshot {
   portfolio_id: string;
   snapshot_date: string;
   total_value: number;
+  total_cost: number;
+  total_pl: number;
+  total_pl_pct: number;
+  holdings_count: number;
 }
 
 async function getPortfolios(portfolioId?: string): Promise<Portfolio[]> {
@@ -81,6 +89,8 @@ async function getExistingSnapshots(
   );
 }
 
+// TODO: Refactor this to reduce complexity
+// eslint-disable-next-line complexity
 async function backfillPortfolio(
   portfolio: Portfolio,
   fromDate?: Date
@@ -116,16 +126,71 @@ async function backfillPortfolio(
 
     // Calculate historical value
     try {
-      const value = await calculateHistoricalValue(
-        portfolio.id,
-        currentDate,
-        supabase as never
+      // 1. Fetch all transactions up to this date
+      const { data: transactions, error: txnError } = await supabase
+        .from('transactions')
+        .select('id, symbol, type, quantity, price_per_unit, transaction_date')
+        .eq('portfolio_id', portfolio.id)
+        .lte('transaction_date', currentDate.toISOString());
+
+      if (txnError) {
+        console.error(`   ⚠️  Failed to fetch transactions for ${dateString}:`, txnError);
+        currentDate.setDate(currentDate.getDate() + 1);
+        continue;
+      }
+
+      // 2. Skip if no transactions yet
+      if (!transactions || transactions.length === 0) {
+        currentDate.setDate(currentDate.getDate() + 1);
+        continue;
+      }
+
+      // 3. Fetch historical prices for this date
+      const symbols = [...new Set(transactions.map(t => t.symbol))];
+      const { data: prices, error: priceError } = await supabase
+        .from('price_cache')
+        .select('symbol, price_usd, change_24h_pct')
+        .in('symbol', symbols)
+        .eq('price_date', dateString);
+
+      if (priceError) {
+        console.error(`   ⚠️  Failed to fetch prices for ${dateString}:`, priceError);
+        currentDate.setDate(currentDate.getDate() + 1);
+        continue;
+      }
+
+      // 4. Skip if no price data available
+      if (!prices || prices.length === 0) {
+        currentDate.setDate(currentDate.getDate() + 1);
+        continue;
+      }
+
+      // 5. Build price map
+      const priceMap: Record<string, { symbol: string; price_usd: number; change_24h_pct: number }> = {};
+      for (const price of prices) {
+        priceMap[price.symbol] = {
+          symbol: price.symbol,
+          price_usd: price.price_usd,
+          change_24h_pct: price.change_24h_pct || 0,
+        };
+      }
+
+      // 6. Calculate holdings and portfolio value
+      const holdings = calculateHoldings(
+        transactions as Transaction[],
+        priceMap
       );
+
+      const portfolioValue = calculatePortfolioValue(holdings, []);
 
       snapshots.push({
         portfolio_id: portfolio.id,
         snapshot_date: dateString,
-        total_value: value,
+        total_value: portfolioValue.total_value,
+        total_cost: portfolioValue.total_cost,
+        total_pl: portfolioValue.total_pl,
+        total_pl_pct: portfolioValue.total_pl_pct,
+        holdings_count: portfolioValue.holdings_count,
       });
 
       calculated++;
