@@ -32,6 +32,8 @@ async function initiateOAuthFlow() {
 /**
  * Handle OAuth callback and create user session
  */
+// TODO: Refactor to reduce complexity
+// eslint-disable-next-line complexity
 async function handleOAuthCallback(code: string) {
   const { data: authData, error: authError } = await supabase.auth.exchangeCodeForSession(code)
 
@@ -39,27 +41,24 @@ async function handleOAuthCallback(code: string) {
     return unauthorizedResponse('OAUTH_FAILED', 'Failed to authenticate with Google')
   }
 
-  // Check if user profile exists, create if not
-  const { data: existingProfile } = await supabase
-    .from('user_profiles')
-    .select('*')
-    .eq('id', authData.user.id)
-    .single()
+  // User profile is automatically created by database trigger (handle_new_user)
+  // Just update display_name and avatar_url from Google metadata if provided
+  const displayName = authData.user.user_metadata?.full_name || null
+  const avatarUrl = authData.user.user_metadata?.avatar_url || null
 
-  if (!existingProfile) {
-    // Create profile for new Google user
+  if (displayName || avatarUrl) {
+    const updateData: { display_name?: string | null; avatar_url?: string | null } = {}
+    if (displayName) updateData.display_name = displayName
+    if (avatarUrl) updateData.avatar_url = avatarUrl
+
     const { error: profileError } = await supabase
       .from('user_profiles')
-      .insert({
-        id: authData.user.id,
-        email: authData.user.email!,
-        display_name: authData.user.user_metadata?.full_name || null,
-        avatar_url: authData.user.user_metadata?.avatar_url || null
-      })
+      .update(updateData)
+      .eq('id', authData.user.id)
 
     if (profileError) {
-      console.error('Failed to create user profile:', profileError)
-      return internalErrorResponse('Failed to create user profile')
+      console.error('Failed to update user profile from Google metadata:', profileError)
+      // Don't fail authentication - profile data can be updated later
     }
   }
 

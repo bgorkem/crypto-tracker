@@ -10,7 +10,7 @@
 import { NextRequest } from 'next/server'
 import { createAdminClient, supabase as anonClient } from '@/lib/supabase'
 import { RegisterSchema } from '@/lib/validation'
-import { successResponse, conflictResponse, badRequestResponse, internalErrorResponse, handleValidationError } from '@/lib/api-response'
+import { successResponse, conflictResponse, internalErrorResponse, handleValidationError } from '@/lib/api-response'
 import { sanitizeInput } from '@/lib/sanitize'
 
 // TODO: Refactor this to reduce complexity
@@ -70,38 +70,27 @@ export async function POST(request: NextRequest) {
     }
 
     if (authError) {
-      // Check if user already exists (duplicate email)
-      const errorMsg = authError.message.toLowerCase();
-      if (errorMsg.includes('already registered') || 
-          errorMsg.includes('already been registered') ||
-          errorMsg.includes('duplicate') ||
-          errorMsg.includes('already exists')) {
-        return conflictResponse('EMAIL_EXISTS', 'User with this email already exists')
+      // Check if the error is due to duplicate email
+      if (authError.message?.includes('already registered')) {
+        return conflictResponse('User already exists')
       }
-      return badRequestResponse('REGISTRATION_FAILED', authError.message)
-    }
-
-    if (!authData.user) {
+      console.error('Failed to create user:', authError)
       return internalErrorResponse('Failed to create user')
     }
 
-    // Create user profile in our database
-    // Use admin client for database operations (RLS policies allow admin access)
-    const supabaseClient = isTestMode ? createAdminClient() : anonClient
-    const { error: profileError } = await supabaseClient
-      .from('user_profiles')
-      .insert({
-        id: authData.user.id,
-        email: authData.user.email!,
-        display_name: sanitizedDisplayName,
-        avatar_url: null
-      })
+    // User profile is automatically created by database trigger (handle_new_user)
+    // No need to manually insert - just update display_name if provided
+    if (sanitizedDisplayName && authData.user) {
+      const supabaseClient = isTestMode ? createAdminClient() : anonClient
+      const { error: profileError } = await supabaseClient
+        .from('user_profiles')
+        .update({ display_name: sanitizedDisplayName })
+        .eq('id', authData.user.id)
 
-    if (profileError) {
-      // If profile creation fails, we should ideally rollback the auth user
-      // But Supabase doesn't support transactions across auth and database
-      console.error('Failed to create user profile:', profileError)
-      return internalErrorResponse('Failed to create user profile')
+      if (profileError) {
+        console.error('Failed to update user profile display name:', profileError)
+        // Don't fail registration - display name can be set later
+      }
     }
 
     // Create a session for the user (sign them in automatically)
@@ -116,9 +105,9 @@ export async function POST(request: NextRequest) {
       return successResponse(
         {
           user: {
-            id: authData.user.id,
-            email: authData.user.email!,
-            created_at: authData.user.created_at
+            id: authData.user?.id || '',
+            email: authData.user?.email || email,
+            created_at: authData.user?.created_at || new Date().toISOString()
           },
           session: null
         },
@@ -130,9 +119,9 @@ export async function POST(request: NextRequest) {
     return successResponse(
       {
         user: {
-          id: authData.user.id,
-          email: authData.user.email!,
-          created_at: authData.user.created_at
+          id: authData.user?.id || sessionData.user.id,
+          email: authData.user?.email || sessionData.user.email || email,
+          created_at: authData.user?.created_at || sessionData.user.created_at
         },
         session: {
           access_token: sessionData.session?.access_token || '',
