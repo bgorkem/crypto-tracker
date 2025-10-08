@@ -30,6 +30,8 @@ async function createPortfolio(
     throw new Error('Not authenticated');
   }
 
+  console.log('Creating portfolio with:', { name, description });
+
   const response = await fetch('/api/portfolios', {
     method: 'POST',
     headers: { 
@@ -39,11 +41,20 @@ async function createPortfolio(
     body: JSON.stringify({ name, description })
   });
 
+  console.log('Portfolio creation response:', {
+    status: response.status,
+    statusText: response.statusText,
+    ok: response.ok
+  });
+
   if (!response.ok) {
-    throw new Error('Failed to create portfolio');
+    const errorData = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
+    console.error('Portfolio creation failed:', errorData);
+    throw new Error(errorData.error?.message || 'Failed to create portfolio');
   }
 
   const data = await response.json();
+  console.log('Portfolio created successfully:', data);
   return data.data;
 }
 
@@ -62,15 +73,18 @@ export default function DashboardPage() {
   } = usePortfolios();
 
   const handleCreatePortfolio = async (name: string, description: string) => {
+    console.log('handleCreatePortfolio called with:', { name, description });
     setIsCreating(true);
     try {
       const newPortfolio = await createPortfolio(supabase, name, description);
+      console.log('Portfolio created, updating state:', newPortfolio);
       setPortfolios(prev => [...(prev || []), newPortfolio]);
       setSelectedPortfolioId(newPortfolio.id);
       toast.success('Portfolio created successfully');
     } catch (error) {
       console.error('Error creating portfolio:', error);
-      toast.error('Failed to create portfolio');
+      toast.error(error instanceof Error ? error.message : 'Failed to create portfolio');
+      throw error; // Re-throw so the dialog knows it failed
     } finally {
       setIsCreating(false);
     }
