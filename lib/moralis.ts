@@ -1,11 +1,16 @@
 /**
  * Moralis API Client
- * Provides cryptocurrency price data
+ * Provides cryptocurrency price data using batch endpoint for efficiency
  */
+
+import { getMockTokenPrices, shouldUseMockData } from './moralis-mock';
 
 const MORALIS_API_KEY = process.env.MORALIS_API_KEY;
 const MORALIS_API_BASE = 'https://deep-index.moralis.io/api/v2.2';
 
+/**
+ * Moralis batch price endpoint response for a single token
+ */
 export interface TokenPrice {
   tokenAddress: string;
   tokenName: string;
@@ -26,6 +31,9 @@ export interface TokenPrice {
   tokenPrice: string;
 }
 
+/**
+ * Standardized price data format for our application
+ */
 export interface PriceData {
   symbol: string;
   price_usd: number;
@@ -67,81 +75,78 @@ const TOKEN_ADDRESSES: Record<string, string> = {
 
 /**
  * Fetches current price data for specified cryptocurrency symbols
+ * Uses Moralis batch endpoint for efficiency (single API call for all tokens)
+ * 
+ * Environment handling:
+ * - NODE_ENV === 'test': Always uses mock data (no API calls during testing)
+ * - No MORALIS_API_KEY: Uses mock data (development without API key)
+ * - Production: Uses real Moralis API batch endpoint
  */
 export async function getTokenPrices(symbols: string[]): Promise<PriceData[]> {
-  if (!MORALIS_API_KEY) {
-    // Return mock data for development/testing
-    return symbols.map(symbol => ({
-      symbol,
-      price_usd: getMockPrice(symbol),
-      market_cap: Math.random() * 1000000000000,
-      volume_24h: Math.random() * 50000000000,
-      change_24h_pct: (Math.random() - 0.5) * 10,
-      last_updated: new Date().toISOString(),
-    }));
+  // Use mock data for testing or when no API key is configured
+  if (shouldUseMockData()) {
+    console.log('[Moralis] Using mock data (test mode or no API key)');
+    return getMockTokenPrices(symbols);
   }
 
-  const pricePromises = symbols.map(async (symbol) => {
-    const address = TOKEN_ADDRESSES[symbol.toUpperCase()];
-    if (!address) {
-      throw new Error(`Unsupported token: ${symbol}`);
-    }
-
-    try {
-      const response = await fetch(
-        `${MORALIS_API_BASE}/erc20/${address}/price?chain=eth`,
-        {
-          headers: {
-            'X-API-Key': MORALIS_API_KEY,
-            'accept': 'application/json',
-          },
+  try {
+    // Build batch request with all token addresses
+    const tokens = symbols
+      .map(symbol => {
+        const address = TOKEN_ADDRESSES[symbol.toUpperCase()];
+        if (!address) {
+          console.warn(`[Moralis] Unsupported token: ${symbol}`);
+          return null;
         }
-      );
+        return {
+          tokenAddress: address,
+          chain: 'eth',
+        };
+      })
+      .filter(Boolean); // Remove null entries
 
-      if (!response.ok) {
-        console.error(`Moralis API error for ${symbol}:`, response.statusText);
-        throw new Error(`Moralis API error: ${response.statusText}`);
-      }
-
-      const data: TokenPrice = await response.json();
-
-      return {
-        symbol: symbol.toUpperCase(),
-        price_usd: data.usdPrice,
-        market_cap: 0, // Moralis doesn't provide this in token price endpoint
-        volume_24h: 0, // Would need different endpoint for volume
-        change_24h_pct: parseFloat(data['24hrPercentChange'] || '0'),
-        last_updated: new Date().toISOString(),
-      };
-    } catch (error) {
-      console.error(`Error fetching price for ${symbol}:`, error);
-      // Fallback to mock data on error
-      return {
-        symbol: symbol.toUpperCase(),
-        price_usd: getMockPrice(symbol),
-        market_cap: 0,
-        volume_24h: 0,
-        change_24h_pct: 0,
-        last_updated: new Date().toISOString(),
-      };
+    if (tokens.length === 0) {
+      console.error('[Moralis] No valid tokens to fetch');
+      return [];
     }
-  });
 
-  return Promise.all(pricePromises);
-}
+    // Make single batch API call for all tokens
+    const response = await fetch(
+      `${MORALIS_API_BASE}/erc20/prices`,
+      {
+        method: 'POST',
+        headers: {
+          'X-API-Key': MORALIS_API_KEY!,
+          'Content-Type': 'application/json',
+          'accept': 'application/json',
+        },
+        body: JSON.stringify({ tokens }),
+      }
+    );
 
-/**
- * Returns mock price data for development/testing
- */
-function getMockPrice(symbol: string): number {
-  const mockPrices: Record<string, number> = {
-    BTC: 65000 + Math.random() * 1000,
-    ETH: 3500 + Math.random() * 100,
-    SOL: 150 + Math.random() * 10,
-    USDC: 1.0,
-    USDT: 1.0,
-    BNB: 600 + Math.random() * 50,
-  };
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[Moralis] Batch API error (${response.status}):`, errorText);
+      throw new Error(`Moralis API error: ${response.status} ${response.statusText}`);
+    }
 
-  return mockPrices[symbol.toUpperCase()] || 100 + Math.random() * 10;
+    const data: TokenPrice[] = await response.json();
+
+    // Map response to our PriceData format
+    const now = new Date().toISOString();
+    return data.map((tokenData, index) => ({
+      symbol: symbols[index].toUpperCase(),
+      price_usd: tokenData.usdPrice,
+      market_cap: 0, // Moralis batch endpoint doesn't provide market cap
+      volume_24h: 0, // Would need different endpoint for volume
+      change_24h_pct: parseFloat(tokenData['24hrPercentChange'] || '0'),
+      last_updated: now,
+    }));
+  } catch (error) {
+    console.error('[Moralis] Error fetching batch prices:', error);
+    
+    // Fallback to mock data on error
+    console.log('[Moralis] Falling back to mock data due to error');
+    return getMockTokenPrices(symbols);
+  }
 }
