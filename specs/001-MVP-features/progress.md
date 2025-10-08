@@ -1,8 +1,8 @@
 # MVP Feature Implementation Progress
 
-**Last Updated**: 2025-10-08 (Historical Price Tracking Added)  
-**Overall Progress**: 84/108 tasks (78%)  
-**Test Status**: ✅ 127/130 passing (98%) - 1 timeout, likely transient
+**Last Updated**: 2025-10-08 (Phase 6: T098-T101 Complete)  
+**Overall Progress**: 88/108 tasks (81%)  
+**Test Status**: ✅ CoinGecko client tests passing, Contract tests ready
 
 ---
 
@@ -138,14 +138,14 @@
 
 ---
 
-## Phase 6: Historical Price Tracking ⏳ NOT STARTED
-**Status**: 0/11 tasks (0%)
+## Phase 6: Historical Price Tracking ⏳ IN PROGRESS
+**Status**: 4/11 tasks (36%)
 
-### Database & API Infrastructure ⏳
-- ⏳ T098 Database migration: Add price_date column to price_cache
-- ⏳ T099 Create CoinGecko API client for historical prices
-- ⏳ T100 Contract test: GET /api/prices/historical (TDD Red)
-- ⏳ T101 Implement GET /api/prices/historical endpoint
+### Database & API Infrastructure ✅
+- ✅ T098 Database migration: Add price_date column to price_cache *(commit: 7611b09)*
+- ✅ T099 Create CoinGecko API client for historical prices *(commit: d71df47)*
+- ✅ T100 Contract test: GET /api/prices/historical (TDD Red) *(commit: c79588d)*
+- ✅ T101 Implement GET /api/prices/historical endpoint *(commit: 1b22f93)*
 
 ### Historical Value Calculation ⏳
 - ⏳ T102 Create calculateHistoricalValue() function
@@ -160,16 +160,13 @@
 - ⏳ T107 Integration test: Historical price backfill and chart accuracy
 - ⏳ T108 Update documentation: Historical Price Tracking
 
-**Critical Issue**: Portfolio charts currently show flat lines or $0 values because they use current prices for all historical dates. Phase 6 will fix this by:
-1. Storing daily cryptocurrency prices with dates (T098)
-2. Calculating portfolio values using date-specific prices (T102)
-3. Backfilling historical data for existing portfolios (T104)
-4. Generating daily snapshots automatically (T105)
-5. Displaying accurate historical performance in charts (T106)
+**Progress**: 
+- ✅ Database schema updated with price_date column
+- ✅ CoinGecko API client implemented (20 unit tests passing)
+- ✅ Historical prices API endpoint live (cache-first strategy)
+- ✅ TDD workflow followed (T100 Red → T101 Green)
 
-**Related Documentation**: 
-- `docs/HISTORICAL-PRICE-RESEARCH.md` - CoinGecko API research and implementation strategy
-- `docs/CHART-DISPLAY-FIX.md` - Current synthetic data approach (to be replaced)
+**Next Steps**: T102-T103 (Historical value calculation)
 
 ---
 
