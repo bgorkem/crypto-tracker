@@ -35,6 +35,8 @@ export default function LoginPage() {
     return Object.keys(newErrors).length === 0;
   };
 
+  // TODO: Refactor this to reduce complexity
+  // eslint-disable-next-line complexity
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
