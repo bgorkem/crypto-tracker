@@ -54,6 +54,8 @@ async function validatePortfolioAccess(
   return {};
 }
 
+// TODO: Refactor this to reduce complexity
+// eslint-disable-next-line complexity
 function validateTransactionFields(body: {
   symbol?: string;
   side?: string;

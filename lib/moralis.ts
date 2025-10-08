@@ -90,22 +90,33 @@ export async function getTokenPrices(symbols: string[]): Promise<PriceData[]> {
   }
 
   try {
-    // Build batch request with all token addresses
-    const tokens = symbols
-      .map(symbol => {
-        const address = TOKEN_ADDRESSES[symbol.toUpperCase()];
-        if (!address) {
-          console.warn(`[Moralis] Unsupported token: ${symbol}`);
-          return null;
-        }
-        return {
-          tokenAddress: address,
-          chain: 'eth',
-        };
-      })
-      .filter(Boolean); // Remove null entries
+    // Build batch request with all token addresses, tracking which symbols are valid
+    const validTokens: Array<{ symbol: string; tokenAddress: string }> = [];
+    
+    symbols.forEach(symbol => {
+      const normalizedSymbol = symbol.toUpperCase().trim();
+      
+      // Skip empty or whitespace-only symbols
+      if (!normalizedSymbol) {
+        console.warn('[Moralis] Skipping empty symbol');
+        return;
+      }
+      
+      const address = TOKEN_ADDRESSES[normalizedSymbol];
+      
+      // Validate address exists and is not empty
+      if (!address || address.trim() === '') {
+        console.warn(`[Moralis] Unsupported or invalid token: ${normalizedSymbol}`);
+        return;
+      }
+      
+      validTokens.push({
+        symbol: normalizedSymbol,
+        tokenAddress: address,
+      });
+    });
 
-    if (tokens.length === 0) {
+    if (validTokens.length === 0) {
       console.error('[Moralis] No valid tokens to fetch');
       return [];
     }
@@ -120,7 +131,11 @@ export async function getTokenPrices(symbols: string[]): Promise<PriceData[]> {
           'Content-Type': 'application/json',
           'accept': 'application/json',
         },
-        body: JSON.stringify({ tokens }),
+        body: JSON.stringify({ 
+          tokens: validTokens.map(t => ({
+            token_address: t.tokenAddress, // Moralis expects 'token_address', not 'tokenAddress' or 'chain'
+          }))
+        }),
       }
     );
 
@@ -132,10 +147,10 @@ export async function getTokenPrices(symbols: string[]): Promise<PriceData[]> {
 
     const data: TokenPrice[] = await response.json();
 
-    // Map response to our PriceData format
+    // Map response to our PriceData format using the validTokens array for correct symbol mapping
     const now = new Date().toISOString();
     return data.map((tokenData, index) => ({
-      symbol: symbols[index].toUpperCase(),
+      symbol: validTokens[index].symbol, // Use symbol from validTokens, not original symbols array
       price_usd: tokenData.usdPrice,
       market_cap: 0, // Moralis batch endpoint doesn't provide market cap
       volume_24h: 0, // Would need different endpoint for volume

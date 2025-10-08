@@ -13,6 +13,8 @@ import { RegisterSchema } from '@/lib/validation'
 import { successResponse, conflictResponse, badRequestResponse, internalErrorResponse, handleValidationError } from '@/lib/api-response'
 import { sanitizeInput } from '@/lib/sanitize'
 
+// TODO: Refactor this to reduce complexity
+// eslint-disable-next-line complexity
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()

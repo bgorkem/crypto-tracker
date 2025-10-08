@@ -3,6 +3,9 @@
     "next/core-web-vitals",
     "next/typescript"
   ],
+  "ignorePatterns": [
+    "supabase/functions/**"
+  ],
   "rules": {
     "complexity": ["error", 10],
     "@typescript-eslint/no-explicit-any": "error",

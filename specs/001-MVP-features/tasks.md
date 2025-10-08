@@ -12,6 +12,7 @@ Phase 2: Tests First - TDD Red (T007-T034) → All tests MUST FAIL initially
 Phase 3: Foundation (T035-T048) → Database, auth, base infrastructure
 Phase 4: Core Features (T049-T076) → Make tests pass (TDD Green)
 Phase 5: Quality & Polish (T077-T088) → Performance, accessibility, refactor
+Phase 6: Historical Price Tracking (T098-T108) → Real historical portfolio performance
 ```
 
 **Path Convention**: Next.js monolithic app (frontend + backend colocated)
@@ -1515,6 +1516,333 @@ interface HeaderProps {
 
 ---
 
+## Phase 6: Historical Price Tracking (FR-016a-d)
+
+### T098 [P] Database migration: Add price_date column to price_cache
+**Path**: `supabase/migrations/[timestamp]_add_price_date.sql`  
+**Action**: Add date dimension to price_cache table for historical tracking  
+**Requirements**:
+- Add `price_date DATE NOT NULL` column to `price_cache` table
+- Create composite primary key on `(symbol, price_date)`
+- Add index on `price_date` for efficient date range queries
+- Backfill existing records with current date (`NOW()::DATE`)
+- Migration should be idempotent (safe to run multiple times)
+**Migration SQL**:
+```sql
+-- Add price_date column (nullable first for backfill)
+ALTER TABLE price_cache ADD COLUMN IF NOT EXISTS price_date DATE;
+
+-- Backfill existing records with today's date
+UPDATE price_cache SET price_date = NOW()::DATE WHERE price_date IS NULL;
+
+-- Make price_date required
+ALTER TABLE price_cache ALTER COLUMN price_date SET NOT NULL;
+
+-- Drop old primary key if exists
+ALTER TABLE price_cache DROP CONSTRAINT IF EXISTS price_cache_pkey;
+
+-- Create composite primary key
+ALTER TABLE price_cache ADD PRIMARY KEY (symbol, price_date);
+
+-- Add index for date range queries
+CREATE INDEX IF NOT EXISTS idx_price_cache_date ON price_cache(price_date);
+```
+**Verify**:
+- Migration runs without errors on dev database
+- Existing price records have `price_date = today`
+- Can insert multiple prices for same symbol with different dates
+- Cannot insert duplicate (symbol, date) combinations
+- TypeScript types regenerated with new schema
+
+---
+
+### T099 Create CoinGecko API client for historical prices
+**Path**: `lib/coingecko.ts`  
+**Action**: Build client to fetch historical cryptocurrency prices from CoinGecko API  
+**Requirements**:
+- Free tier API endpoint: `https://api.coingecko.com/api/v3/coins/{coin_id}/history?date={DD-MM-YYYY}`
+- Symbol mapping: BTC→bitcoin, ETH→ethereum, SOL→solana, USDC→usd-coin, USDT→tether, BNB→binancecoin, XRP→ripple
+- Rate limiting: Respect 10-50 calls/min free tier limit
+- Error handling: Network failures, rate limits, invalid dates
+- Return type: `{ symbol: string, price_usd: number, price_date: Date }`
+**API Client Interface**:
+```typescript
+export async function getHistoricalPrice(
+  symbol: string,
+  date: Date
+): Promise<{ symbol: string; price_usd: number; price_date: Date } | null>
+
+export async function getHistoricalPrices(
+  symbols: string[],
+  date: Date
+): Promise<Array<{ symbol: string; price_usd: number; price_date: Date }>>
+
+function mapSymbolToCoinGeckoId(symbol: string): string | null
+```
+**Verify**:
+- Fetch BTC price for Oct 7, 2025 returns ~$124,773
+- Rate limiting prevents API abuse
+- Invalid symbols return null gracefully
+- All 7 supported symbols map correctly
+- Unit tests with mocked API responses
+
+---
+
+### T100 [P] Contract test: GET /api/prices/historical?symbols=BTC,ETH&date=2025-10-07
+**Path**: `__tests__/contract/prices-historical.test.ts`  
+**Action**: Write contract test for historical price API endpoint  
+**Requirements**:
+- Test request: `GET /api/prices/historical?symbols=BTC,ETH&date=2025-10-07`
+- Expected response:
+```typescript
+{
+  success: true,
+  data: [
+    { symbol: 'BTC', price_usd: 124773.50, price_date: '2025-10-07' },
+    { symbol: 'ETH', price_usd: 3521.80, price_date: '2025-10-07' }
+  ]
+}
+```
+- Test multiple symbols
+- Test invalid date format (400 error)
+- Test unsupported symbols (filtered out)
+- Test missing date parameter (400 error)
+**Verify**: Test MUST FAIL initially (TDD red)
+
+---
+
+### T101 Implement GET /api/prices/historical endpoint
+**Path**: `app/api/prices/historical/route.ts`  
+**Action**: Implement historical price fetch endpoint  
+**Requirements**:
+- Query params: `symbols` (comma-separated), `date` (YYYY-MM-DD)
+- Validate date format and symbols
+- Check `price_cache` table first (symbol, price_date)
+- If missing, fetch from CoinGecko and store in cache
+- Return cached or fetched prices
+- Handle partial failures (some symbols missing)
+**API Logic**:
+```typescript
+1. Parse and validate query params
+2. Query price_cache for (symbol, date) matches
+3. For missing prices:
+   a. Fetch from CoinGecko API
+   b. Store in price_cache
+   c. Add to results
+4. Return all prices (cached + fetched)
+```
+**Verify**:
+- Contract test T100 passes
+- Repeated requests use cached data (no duplicate API calls)
+- Invalid params return 400 with clear error
+
+---
+
+### T102 Create historical portfolio value calculation function
+**Path**: `lib/calculations.ts` (add new function)  
+**Action**: Calculate portfolio value at specific historical date using date-specific prices  
+**Requirements**:
+- Function signature: `calculateHistoricalValue(portfolioId: string, date: Date): Promise<number>`
+- Get all transactions up to and including the date
+- Calculate holdings using existing `calculateHoldings()` logic
+- Fetch historical prices for that date from `price_cache`
+- Compute value: Σ (holding.quantity × historical_price)
+- Handle missing price data (use last available price or null)
+**Algorithm**:
+```typescript
+1. Fetch transactions WHERE executed_at <= date ORDER BY executed_at ASC
+2. holdings = calculateHoldings(transactions)
+3. symbols = unique(holdings.map(h => h.symbol))
+4. prices = await getHistoricalPrices(symbols, date)
+5. value = holdings.reduce((sum, h) => {
+     const price = prices.find(p => p.symbol === h.symbol)?.price_usd || 0
+     return sum + (h.quantity * price)
+   }, 0)
+6. return value
+```
+**Verify**:
+- Unit test with known transactions and prices
+- Test with missing historical prices
+- 100% code coverage for this function
+
+---
+
+### T103 [P] Unit test: calculateHistoricalValue function
+**Path**: `__tests__/unit/historical-value.test.ts`  
+**Action**: Write comprehensive unit tests for historical value calculation  
+**Requirements**:
+- Test case 1: Portfolio with 1 BTC bought Oct 5 → value on Oct 7 = 1 × $124,773
+- Test case 2: Portfolio with multiple holdings → sum correctly
+- Test case 3: Missing price data for date → handle gracefully
+- Test case 4: No transactions before date → return 0
+- Test case 5: Transactions after date ignored → only count past transactions
+**Mock Data**:
+- Portfolio: created Oct 5, 2025
+- Transactions: BUY 1 BTC @ $64,000 on Oct 5
+- Historical prices: Oct 5 = $64,500, Oct 6 = $65,200, Oct 7 = $124,773
+**Verify**: Test MUST FAIL initially (TDD red), then pass after T102
+
+---
+
+### T104 Create historical snapshot backfill utility
+**Path**: `scripts/backfill-historical-snapshots.ts`  
+**Action**: Script to generate historical portfolio value snapshots for existing portfolios  
+**Requirements**:
+- For each portfolio: get creation date
+- Generate snapshots for each day from creation to today
+- Use `calculateHistoricalValue()` for each date
+- Store in `portfolio_snapshots` table (or create new table)
+- Skip dates that already have snapshots
+- Run idempotently (safe to re-run)
+- Log progress and errors
+**Script Logic**:
+```typescript
+1. Get all portfolios with created_at dates
+2. For each portfolio:
+   a. Start date = portfolio.created_at
+   b. End date = today
+   c. For each day in range:
+      - Check if snapshot exists
+      - If not: calculate historical value and insert
+   d. Log: "Portfolio {id}: {count} snapshots created"
+3. Summary: Total portfolios processed, snapshots created
+```
+**CLI Usage**: `npm run backfill:snapshots`
+**Verify**:
+- Backfill creates accurate historical data
+- Re-running doesn't duplicate snapshots
+- Progress logged clearly
+
+---
+
+### T105 Create Supabase Edge Function for daily snapshot generation
+**Path**: `supabase/functions/daily-snapshot/index.ts`  
+**Action**: Edge Function to run daily at midnight UTC and generate portfolio snapshots  
+**Requirements**:
+- Trigger: Scheduled daily at 00:00 UTC
+- Fetch yesterday's cryptocurrency prices (7 symbols)
+- Store in `price_cache` with `price_date = yesterday`
+- For each portfolio: calculate value using yesterday's prices
+- Insert snapshot into `portfolio_snapshots` table
+- Handle failures gracefully (retry logic)
+**Edge Function Code**:
+```typescript
+Deno.serve(async (req) => {
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  yesterday.setHours(0, 0, 0, 0)
+
+  // 1. Fetch prices for yesterday from Moralis/CoinGecko
+  const prices = await fetchHistoricalPrices(SUPPORTED_SYMBOLS, yesterday)
+  
+  // 2. Store in price_cache
+  await storePrices(prices)
+  
+  // 3. Generate snapshots for all portfolios
+  const portfolios = await getAllPortfolios()
+  for (const portfolio of portfolios) {
+    const value = await calculateHistoricalValue(portfolio.id, yesterday)
+    await createSnapshot(portfolio.id, yesterday, value)
+  }
+  
+  return new Response(JSON.stringify({ success: true }), {
+    headers: { 'Content-Type': 'application/json' }
+  })
+})
+```
+**Verify**:
+- Manually trigger function and check snapshots created
+- Scheduled trigger works (test with cron)
+- Handles edge cases (portfolios created today, etc.)
+
+---
+
+### T106 Update chart API to use historical prices instead of synthetic data
+**Path**: `app/api/portfolios/[id]/chart/route.ts`  
+**Action**: Modify chart endpoint to query actual historical snapshots with date-specific prices  
+**Requirements**:
+- Remove `generateSyntheticSnapshots()` function
+- Query `portfolio_snapshots` table for date range
+- If no snapshots exist, trigger backfill for this portfolio
+- Calculate each snapshot value using `calculateHistoricalValue()`
+- Return real historical performance data
+**Updated Logic**:
+```typescript
+// Before: Used currentValue for all dates (wrong)
+const snapshots = generateSyntheticSnapshots(null, currentValue, createdAt)
+
+// After: Query real historical snapshots
+const snapshots = await supabase
+  .from('portfolio_snapshots')
+  .select('captured_at, total_value')
+  .eq('portfolio_id', portfolioId)
+  .gte('captured_at', startDate)
+  .lte('captured_at', endDate)
+  .order('captured_at', { ascending: true })
+
+// If empty, backfill for this portfolio
+if (snapshots.length === 0) {
+  await backfillPortfolioSnapshots(portfolioId)
+  // Re-query
+}
+```
+**Verify**:
+- Chart displays accurate historical values (not flat line)
+- Values change day-to-day based on price movements
+- Portfolio created Oct 5 shows different values for Oct 5, 6, 7
+- Contract test updated to verify historical accuracy
+
+---
+
+### T107 [P] Integration test: Historical price backfill and chart accuracy
+**Path**: `__tests__/integration/historical-prices.test.ts`  
+**Action**: End-to-end test of historical price system  
+**Requirements**:
+- Create test portfolio on Oct 5 with 1 BTC @ $64,000
+- Mock historical prices: Oct 5 = $64,500, Oct 6 = $65,200, Oct 7 = $124,773
+- Run backfill script
+- Verify snapshots created for Oct 5, 6, 7
+- Verify chart API returns correct values:
+  - Oct 5: 1 × $64,500 = $64,500
+  - Oct 6: 1 × $65,200 = $65,200
+  - Oct 7: 1 × $124,773 = $124,773
+- Verify chart shows line (not flat or $0)
+**Test Flow**:
+```typescript
+1. Setup: Create portfolio with historical transaction
+2. Mock CoinGecko API responses for Oct 5-7
+3. Run: backfillHistoricalSnapshots(portfolioId)
+4. Query: GET /api/portfolios/{id}/chart?days=7
+5. Assert: 3 data points with correct values
+6. Assert: Values are different (not all same)
+```
+**Verify**:
+- Test passes with real historical calculation
+- No synthetic data used
+- Chart visually shows performance line
+
+---
+
+### T108 Update documentation: Historical Price Tracking
+**Path**: `docs/HISTORICAL-PRICE-TRACKING.md` (rename from HISTORICAL-PRICE-RESEARCH.md)  
+**Action**: Document implementation details and usage  
+**Requirements**:
+- Architecture overview (CoinGecko API, price_cache table, daily Edge Function)
+- Symbol mapping table (BTC → bitcoin, etc.)
+- Manual backfill instructions: `npm run backfill:snapshots`
+- Cron schedule: Daily midnight UTC via Supabase Edge Function
+- Troubleshooting: Missing data, rate limits, API failures
+- Cost analysis: Free tier limits (10-50 calls/min sufficient)
+**Documentation Sections**:
+1. Overview: Why historical prices matter
+2. Architecture: Database schema, API integration, snapshot generation
+3. Usage: How to backfill, how daily snapshots work
+4. Maintenance: Monitoring, errors, rate limits
+5. Testing: How to test historical calculations
+**Verify**: Developers can understand and maintain system from docs
+
+---
+
 ## Dependencies Graph
 
 ```
@@ -1538,7 +1866,7 @@ Snapshots (T072-T074)
 
 UI Components (T089-T092)
   ├─ T089 (PriceTicker) → requires T070 (prices API), T084 (stale logic)
-  ├─ T090 (Chart) → requires T073 (charts API)
+  ├─ T090 (Chart) → requires T073 (charts API), T106 (historical data)
   ├─ T091 (Dashboard) → requires T089, T090
   └─ T092 (Filters) → requires T060 (transactions API with filters)
 
@@ -1549,6 +1877,19 @@ Layout Components (T093-T097)
   ├─ T096 (Root Layout Integration) → requires T093, T095
   └─ T097 (Remove Duplicates) → requires T096
 
+Historical Price Tracking (T098-T108)
+  ├─ T098 (Database Migration) [P] → add price_date column
+  ├─ T099 (CoinGecko Client) [P] → fetch historical prices
+  ├─ T100 (Contract Test) [P] → historical prices API test
+  ├─ T101 (API Endpoint) → requires T098, T099, T100
+  ├─ T102 (Historical Value Calc) → requires T098, T101
+  ├─ T103 (Unit Test) [P] → test T102
+  ├─ T104 (Backfill Script) → requires T102
+  ├─ T105 (Daily Edge Function) → requires T099, T102
+  ├─ T106 (Chart API Update) → requires T102, T104
+  ├─ T107 (Integration Test) [P] → test entire flow
+  └─ T108 (Documentation) [P] → document system
+
 Tests → Implementation Pairs:
   T007 → T049 (Register)
   T011 → T054 (List Portfolios)
@@ -1556,6 +1897,9 @@ Tests → Implementation Pairs:
   T024 → T065 (Holdings Calc)
   T032 → T088 (E2E Auth Flow)
   T034 → T089 (E2E Real-time Updates & PriceTicker)
+  T100 → T101 (Historical Prices API)
+  T103 → T102 (Historical Value Calc)
+  T107 → T106 (Chart API Update)
 ```
 
 ---
@@ -1615,6 +1959,7 @@ npm run test:unit -- __tests__/unit/calculations/*.test.ts
 - [x] Input sanitization implemented (T040-T041, integrated in T053, T059)
 - [x] Real-time update pathways covered by tests (T034, T080)
 - [x] UI components for all major features (T089-T092: PriceTicker, Chart, Dashboard, Filters)
+- [x] Historical price tracking tasks added (T098-T108: Database migration, CoinGecko API, backfill, daily snapshots)
 
 ---
 
@@ -1622,17 +1967,30 @@ npm run test:unit -- __tests__/unit/calculations/*.test.ts
 
 - **TDD Workflow**: Phase 2 tests MUST ALL FAIL initially. Do NOT implement Phase 4 until all tests are failing.
 - **Complexity Budget**: Monitor ESLint complexity warnings after each task. Refactor immediately if >10.
-- **Constitution Gates**: Re-check after Phase 4 (all tests passing), Phase 5 (coverage ≥80%).
+- **Constitution Gates**: Re-check after Phase 4 (all tests passing), Phase 5 (coverage ≥80%), Phase 6 (historical data accurate).
 - **Deployment**: After T088, run `vercel deploy` for production deployment.
 - **Moralis Rate Limits**: Monitor during T069-T071. May need to increase polling interval to 60s if free tier exceeded (40k requests/day).
+- **CoinGecko Rate Limits**: Free tier 10-50 calls/min. Daily snapshot generation (7 symbols) well within limits. Backfill (7 symbols × 30 days) = 210 calls, ~5 minutes to complete safely.
 - **Commit Strategy**: Commit after each task or logical group (e.g., all contract tests, all API endpoints).
 - **UI Component Order**: T089-T090 can be built in parallel, T091 depends on both, T092 is independent.
+- **Historical Data Priority**: T098-T105 should be completed before T106 to ensure chart displays real data.
+- **Backfill Timing**: Run T104 script once after deploying T098-T102 to populate historical data for existing portfolios.
 
 ---
 
-**Estimated Total**: 92 tasks (88 original + 4 new UI components)  
-**Estimated Timeline**: 2-3 weeks (2 developers, 40 hours/week, 50% parallel execution)  
+**Estimated Total**: 108 tasks (88 original + 4 UI components + 5 layout components + 11 historical price tracking)  
+**Estimated Timeline**: 3-4 weeks (2 developers, 40 hours/week, 50% parallel execution)  
 **Constitution Compliance**: ✅ All gates validated in plan.md
+
+**Phase 6 Timeline**: Historical Price Tracking (T098-T108)
+- Database migration: 1 hour
+- CoinGecko client + tests: 4 hours
+- Historical value calculation + tests: 4 hours
+- Backfill script: 3 hours
+- Daily Edge Function: 3 hours
+- Chart API update + tests: 4 hours
+- Documentation: 2 hours
+**Phase 6 Total**: ~21 hours (~3 days)
 
 ---
 
