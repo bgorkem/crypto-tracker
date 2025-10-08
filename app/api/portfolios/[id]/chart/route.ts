@@ -31,22 +31,40 @@ interface HoldingData {
 /**
  * Calculate start date based on interval
  */
-function getStartDate(interval: Interval, portfolioCreatedAt?: string): Date {
+async function getStartDate(
+  interval: Interval, 
+  portfolioId: string,
+  supabase: SupabaseClient
+): Promise<Date> {
   const now = new Date();
   
   switch (interval) {
     case '24h':
-      return new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      // For daily snapshots, show last 2 days to ensure we have data points
+      return new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
     case '7d':
       return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     case '30d':
       return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     case '90d':
       return new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-    case 'all':
-      return portfolioCreatedAt
-        ? new Date(portfolioCreatedAt)
-        : new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+    case 'all': {
+      // Get the earliest snapshot date for this portfolio
+      const { data: earliestSnapshot } = await supabase
+        .from('portfolio_snapshots')
+        .select('snapshot_date')
+        .eq('portfolio_id', portfolioId)
+        .order('snapshot_date', { ascending: true })
+        .limit(1)
+        .single();
+
+      if (earliestSnapshot) {
+        return new Date(earliestSnapshot.snapshot_date);
+      }
+      
+      // Fallback to 1 year ago if no snapshots
+      return new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+    }
   }
 }
 
@@ -273,7 +291,7 @@ export async function GET(
     return authResult.response;
   }
 
-  const { supabase, portfolio } = authResult;
+  const { supabase } = authResult;
 
   // Validate interval
   const { searchParams } = new URL(request.url);
@@ -287,7 +305,7 @@ export async function GET(
   const interval = intervalResult.interval;
 
   try {
-    const startDate = getStartDate(interval, portfolio.created_at);
+    const startDate = await getStartDate(interval, portfolioId, supabase);
 
     const { data: snapshots, error: snapshotsError } = await supabase
       .from('portfolio_snapshots')
