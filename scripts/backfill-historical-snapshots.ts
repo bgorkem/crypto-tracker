@@ -101,8 +101,28 @@ async function backfillPortfolio(
   const existingSnapshots = await getExistingSnapshots(portfolio.id);
   console.log(`   Found ${existingSnapshots.size} existing snapshots`);
 
-  // Determine date range
-  const startDate = fromDate || new Date(portfolio.created_at);
+  // Determine date range - start from earliest transaction, not portfolio creation
+  let startDate: Date;
+  if (fromDate) {
+    startDate = fromDate;
+  } else {
+    // Fetch earliest transaction date
+    const { data: earliestTx, error: txError } = await supabase
+      .from('transactions')
+      .select('transaction_date')
+      .eq('portfolio_id', portfolio.id)
+      .order('transaction_date', { ascending: true })
+      .limit(1)
+      .single();
+
+    if (txError || !earliestTx) {
+      console.log('   ℹ️  No transactions found, skipping portfolio');
+      return;
+    }
+
+    startDate = new Date(earliestTx.transaction_date);
+  }
+
   const endDate = new Date();
   endDate.setHours(0, 0, 0, 0); // Midnight today
 

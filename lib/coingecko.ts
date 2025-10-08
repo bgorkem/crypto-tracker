@@ -124,11 +124,16 @@ export async function getHistoricalPrice(
 
   try {
     const response = await rateLimiter.execute(async () => {
-      const res = await fetch(url, {
-        headers: {
-          'Accept': 'application/json',
-        },
-      });
+      const headers: Record<string, string> = {
+        'Accept': 'application/json',
+      };
+
+      // Add API key if available (increases rate limits significantly)
+      if (process.env.COINGECKO_API_KEY) {
+        headers['x-cg-demo-api-key'] = process.env.COINGECKO_API_KEY;
+      }
+
+      const res = await fetch(url, { headers });
 
       if (!res.ok) {
         if (res.status === 429) {
