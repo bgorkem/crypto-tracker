@@ -237,3 +237,94 @@ export function calculatePortfolioValue(
     last_updated: new Date().toISOString(),
   };
 }
+
+/**
+ * Calculate historical portfolio value at a specific date
+ * @param portfolioId - Portfolio UUID
+ * @param date - Date to calculate value for
+ * @param supabase - Supabase client instance
+ * @returns Total portfolio value in USD
+ */
+export async function calculateHistoricalValue(
+  portfolioId: string,
+  date: Date,
+  supabase: {
+    from: (table: string) => {
+      select: (columns: string) => {
+        eq: (column: string, value: string) => {
+          lte: (column: string, value: string) => Promise<{
+            data: Transaction[] | null;
+            error: { message: string } | null;
+          }>;
+        };
+      };
+    };
+  }
+): Promise<number> {
+  // 1. Fetch all transactions up to the specified date
+  const { data: transactions, error: txnError } = await supabase
+    .from('transactions')
+    .select('id, symbol, type, quantity, price_per_unit, transaction_date')
+    .eq('portfolio_id', portfolioId)
+    .lte('transaction_date', date.toISOString());
+
+  if (txnError) {
+    throw new Error(`Failed to fetch transactions: ${txnError.message}`);
+  }
+
+  // 2. Return 0 if no transactions
+  if (!transactions || transactions.length === 0) {
+    return 0;
+  }
+
+  // 3. Calculate holdings using existing calculateHoldings function
+  // We need to provide prices, but we'll use dummy prices since we only need quantities
+  const dummyPrices: Record<string, Price> = {};
+  const holdings = calculateHoldings(transactions, dummyPrices);
+
+  // 4. Return 0 if no open positions
+  if (holdings.length === 0) {
+    return 0;
+  }
+
+  // 5. Fetch historical prices for all symbols from price_cache
+  const dateString = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+
+  const { data: prices, error: priceError } = await (supabase
+    .from('price_cache')
+    .select('symbol, price_usd, price_date')
+    .eq('price_date', dateString) as unknown as Promise<{
+    data:
+      | Array<{ symbol: string; price_usd: number; price_date: string }>
+      | null;
+    error: { message: string } | null;
+  }>);
+
+  if (priceError) {
+    throw new Error(`Failed to fetch historical prices: ${priceError.message}`);
+  }
+
+  // 6. Build price lookup map
+  const priceMap = new Map<string, number>();
+  if (prices) {
+    for (const price of prices) {
+      priceMap.set(price.symbol, price.price_usd);
+    }
+  }
+
+  // 7. Calculate total value
+  let totalValue = 0;
+
+  for (const holding of holdings) {
+    const historicalPrice = priceMap.get(holding.symbol);
+
+    // Skip if no historical price available
+    if (historicalPrice === undefined) {
+      continue;
+    }
+
+    totalValue += holding.total_quantity * historicalPrice;
+  }
+
+  return totalValue;
+}
