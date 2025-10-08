@@ -74,6 +74,12 @@ npx tsx scripts/init-test-pool.ts
    npm run test:cleanup  # Removes any leaked @testuser.com users
    ```
 
+**Manual user deletion** (if needed):
+```bash
+npx tsx scripts/delete-user.ts <user-id>
+# Deletes both auth user and user_profiles record
+```
+
 **Why separate terminals?**
 - Contract tests make real HTTP requests to `localhost:3000`
 - The server must be running with `TEST_MODE=true` (from `.env.local`)
