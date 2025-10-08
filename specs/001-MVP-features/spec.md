@@ -64,6 +64,8 @@ A new user signs up, creates a portfolio, adds initial BUY transactions for seve
 10. **Given** a logged-in user on any page (dashboard, portfolio detail, auth), **When** they view the page, **Then** a consistent header with logo and user account menu is displayed, and footer with app info is shown.
 11. **Given** a logged-in user, **When** they click their user avatar in the header, **Then** a dropdown shows their email and logout option.
 12. **Given** a logged-in user, **When** they click logout in the account menu, **Then** they are logged out and redirected to the login page.
+13. **Given** a user viewing a portfolio chart, **When** the chart displays historical data, **Then** portfolio values MUST be calculated using date-specific cryptocurrency prices (e.g., portfolio value on Oct 5 uses Oct 5 prices, not current prices).
+14. **Given** a portfolio created before historical price tracking, **When** the user views the portfolio chart, **Then** historical data is backfilled using stored historical prices and displayed accurately.
 
 ### Edge Cases
 - SELL quantity > current holding → validation error, no mutation.
@@ -72,7 +74,10 @@ A new user signs up, creates a portfolio, adds initial BUY transactions for seve
 - Transaction timestamp in future → reject with explanation.
 - Extremely volatile price swing (>20% in 5 min) → highlight affected assets (visual indicator) [NEEDS CLARIFICATION: highlight requirement?].
 - Asset symbol not in supported list → reject with guidance to supported symbols list.
-- Portfolio with zero holdings → show onboarding CTA (add transaction, import, learn). 
+- Portfolio with zero holdings → show onboarding CTA (add transaction, import, learn).
+- Missing historical price data for specific date → use last available price before that date or display gap indicator.
+- Historical price API rate limit exceeded → queue requests and retry with exponential backoff.
+- Chart display with insufficient data points (< 2) → show "Insufficient data" message with guidance to add transactions. 
 
 ## Requirements *(mandatory)*
 
@@ -94,6 +99,10 @@ A new user signs up, creates a portfolio, adds initial BUY transactions for seve
 - **FR-014**: System MUST persist all user, portfolio, transaction data reliably with user scoping.
 - **FR-015**: System MUST show last price update timestamp and stale indicator if no update for >30 seconds.
 - **FR-016**: Dashboard must display portfolio value over time with chart/graph intervals: 24 hours, 7 days, 30 days, 90 days, All time
+- **FR-016a**: System MUST store daily historical cryptocurrency prices for all supported symbols with date dimension.
+- **FR-016b**: System MUST calculate historical portfolio values using date-specific cryptocurrency prices (not current prices for all dates).
+- **FR-016c**: System MUST support backfilling historical prices for existing portfolios created before historical price tracking was implemented.
+- **FR-016d**: System MUST generate daily portfolio value snapshots at midnight UTC using historical prices for accurate performance tracking.
 - **FR-017**: System MUST validate symbols against supported list; unsupported symbols rejected with error.
 - **FR-018**: System MUST record an audit log (create/edit/delete transaction, portfolio changes).
 - **FR-019**: System MUST support pagination or lazy loading when transaction count exceeds 100 transactions.
