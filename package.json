@@ -17,7 +17,8 @@
     "db:reset": "supabase db reset",
     "db:migrate": "supabase db push",
     "supabase:start": "supabase start",
-    "supabase:stop": "supabase stop"
+    "supabase:stop": "supabase stop",
+    "backfill:snapshots": "npx tsx scripts/backfill-historical-snapshots.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
