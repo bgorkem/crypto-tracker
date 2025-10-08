@@ -9,11 +9,6 @@ interface Snapshot {
   total_value: number;
 }
 
-interface ChartSnapshot {
-  captured_at: string;
-  total_value: number;
-}
-
 interface Transaction {
   symbol: string;
   type: 'BUY' | 'SELL';
@@ -145,85 +140,31 @@ async function fetchCurrentValue(
 }
 
 /**
- * Generate synthetic chart snapshots when historical data is missing
- * This ensures charts always have at least 2 data points to display
+ * Check if snapshots exist for portfolio, log warning if missing
  */
-function generateSyntheticSnapshots(
+function validateSnapshots(
   snapshots: Snapshot[] | null,
-  currentValue: number,
-  portfolioCreatedAt: string
-): { snapshotsData: ChartSnapshot[]; startValue: number } {
+  portfolioId: string
+): { valid: boolean; message?: string } {
   if (!snapshots || snapshots.length === 0) {
-    // No snapshots exist - create synthetic historical data
-    const createdAt = new Date(portfolioCreatedAt);
-    const now = new Date();
-    
-    // Start with creation date and now
-    const baseSnapshots: ChartSnapshot[] = [
-      {
-        captured_at: createdAt.toISOString(),
-        total_value: currentValue,
-      },
-      {
-        captured_at: now.toISOString(),
-        total_value: currentValue,
-      }
-    ];
-    
-    // Add intermediate points if portfolio is older than 1 day
-    const daysSinceCreation = Math.floor((now.getTime() - createdAt.getTime()) / (24 * 60 * 60 * 1000));
-    if (daysSinceCreation > 0) {
-      const intermediatePoints: ChartSnapshot[] = [];
-      const pointsToAdd = Math.min(daysSinceCreation, 7);
-      
-      for (let i = 1; i <= pointsToAdd; i++) {
-        const pointDate = new Date(createdAt.getTime() + (i * 24 * 60 * 60 * 1000));
-        if (pointDate < now) {
-          intermediatePoints.push({
-            captured_at: pointDate.toISOString(),
-            total_value: currentValue,
-          });
-        }
-      }
-      
-      // Merge and sort
-      const allSnapshots = [baseSnapshots[0], ...intermediatePoints, baseSnapshots[1]];
-      return {
-        snapshotsData: allSnapshots.sort((a, b) => 
-          new Date(a.captured_at).getTime() - new Date(b.captured_at).getTime()
-        ),
-        startValue: currentValue,
-      };
-    }
-    
-    return { snapshotsData: baseSnapshots, startValue: currentValue };
-  }
-  
-  if (snapshots.length === 1) {
-    // Only one snapshot - add current value as second point
-    return {
-      snapshotsData: [
-        {
-          captured_at: snapshots[0].snapshot_date,
-          total_value: snapshots[0].total_value,
-        },
-        {
-          captured_at: new Date().toISOString(),
-          total_value: currentValue,
-        }
-      ],
-      startValue: snapshots[0].total_value,
+    console.warn(
+      `[Chart API] No snapshots found for portfolio ${portfolioId}. ` +
+      'Historical price tracking may not be set up. Run backfill script: npm run backfill:snapshots'
+    );
+    return { 
+      valid: false, 
+      message: 'No historical data available. Run backfill script to generate snapshots.' 
     };
   }
-  
-  // Multiple snapshots exist - use them
-  return {
-    snapshotsData: snapshots.map((s: Snapshot) => ({
-      captured_at: s.snapshot_date,
-      total_value: s.total_value,
-    })),
-    startValue: snapshots[0].total_value,
-  };
+
+  if (snapshots.length === 1) {
+    console.warn(
+      `[Chart API] Only one snapshot found for portfolio ${portfolioId}. ` +
+      'Daily snapshot function may not be running.'
+    );
+  }
+
+  return { valid: true };
 }
 
 /**
@@ -363,14 +304,38 @@ export async function GET(
       );
     }
 
+    // Validate snapshots exist
+    const validation = validateSnapshots(snapshots, portfolioId);
+    if (!validation.valid) {
+      // Return empty chart data with warning
+      return NextResponse.json({
+        data: {
+          interval,
+          snapshots: [],
+          current_value: 0,
+          start_value: 0,
+          change_abs: 0,
+          change_pct: 0,
+          warning: validation.message,
+        },
+      });
+    }
+
+    // Use real snapshot data
+    const snapshotsData = snapshots.map((s: Snapshot) => ({
+      captured_at: s.snapshot_date,
+      total_value: s.total_value,
+    }));
+
+    const startValue = snapshots[0].total_value;
     const currentValue = await fetchCurrentValue(supabase, portfolioId);
-    
-    // Generate chart data (synthetic if needed)
-    const { snapshotsData, startValue } = generateSyntheticSnapshots(
-      snapshots,
-      currentValue,
-      portfolio.created_at
-    );
+
+    // Add current value as the latest data point
+    const now = new Date().toISOString();
+    snapshotsData.push({
+      captured_at: now,
+      total_value: currentValue,
+    });
 
     const changeAbs = currentValue - startValue;
     const changePct = startValue > 0 ? (changeAbs / startValue) * 100 : 0;
