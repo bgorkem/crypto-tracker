@@ -18,7 +18,6 @@
     "db:migrate": "supabase db push",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
-    "backfill:snapshots": "npx tsx scripts/backfill-historical-snapshots.ts",
     "backfill:prices": "npx tsx scripts/backfill-price-cache.ts"
   },
   "dependencies": {
