@@ -43,19 +43,19 @@
 
 ## Phase 1: Remove Old Infrastructure (Day 1)
 
-### T001: Drop portfolio_snapshots table
+### T001: Drop portfolio_snapshots table ✅
 **Files**: `supabase/migrations/20251010000001_drop_portfolio_snapshots.sql`
 **Description**: Create migration to drop portfolio_snapshots table and associated indexes (no active users, clean cutover)
 **Dependencies**: None
 **Validation**: Migration runs successfully, table no longer exists in schema
 
-### T002: Remove backfill script
+### T002: Remove backfill script ✅
 **Files**: `scripts/backfill-historical-snapshots.ts` (delete)
 **Description**: Delete backfill-historical-snapshots.ts script file (no longer needed with Redis cache approach)
 **Dependencies**: None
 **Validation**: File deleted, no broken imports
 
-### T003: Update package.json scripts
+### T003: Update package.json scripts ✅
 **Files**: `package.json`
 **Description**: Remove `backfill:snapshots` script command from package.json
 **Dependencies**: None
@@ -65,26 +65,26 @@
 
 ## Phase 2: Database Function Implementation (Day 1-2)
 
-### T004: Create PostgreSQL snapshot calculation function
+### T004: Create PostgreSQL snapshot calculation function ✅
 **Files**: `supabase/migrations/20251010000000_add_calculate_portfolio_snapshots.sql`
 **Description**: Implement calculate_portfolio_snapshots(portfolio_id, start_date, end_date) PostgreSQL function using window functions for cumulative holdings calculation. Must use generate_series for date range, window functions for cumulative sums, LEFT JOIN with price_cache, and return TABLE with snapshot_date, total_value, total_cost, total_pl, total_pl_pct, holdings_count
 **Dependencies**: None
 **Validation**: Function created, can be called via supabase.rpc()
 **Performance**: Must complete in <300ms for 1000 transactions
 
-### T005 [P]: Unit test database function with empty portfolio
+### T005 [P]: Unit test database function with empty portfolio ✅
 **Files**: `__tests__/unit/db-function.test.ts`
 **Description**: Test calculate_portfolio_snapshots returns empty array for portfolio with no transactions (edge case handling)
 **Dependencies**: T004
 **Validation**: Test written and passes
 
-### T006 [P]: Unit test database function with 10-day range
+### T006 [P]: Unit test database function with 10-day range ✅
 **Files**: `__tests__/unit/db-function.test.ts`
 **Description**: Test calculate_portfolio_snapshots returns 10 snapshots for 10-day date range, each with snapshot_date, total_value, total_pl properties
 **Dependencies**: T004
 **Validation**: Test written and passes
 
-### T007 [P]: Unit test database function handles missing price data
+### T007 [P]: Unit test database function handles missing price data ✅
 **Files**: `__tests__/unit/db-function.test.ts`
 **Description**: Test calculate_portfolio_snapshots gracefully handles dates with missing price_cache data (LEFT JOIN null handling)
 **Dependencies**: T004
