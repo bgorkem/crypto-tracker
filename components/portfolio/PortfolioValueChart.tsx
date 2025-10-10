@@ -10,8 +10,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 type Interval = '24h' | '7d' | '30d' | '90d' | 'all';
 
 interface ChartSnapshot {
-  captured_at: string;
-  total_value: number;
+  snapshot_date: string;
+  total_value: string;
+  total_cost: string;
+  total_pl: string;
+  total_pl_pct: string;
+  holdings_count: number;
 }
 
 interface ChartData {
@@ -201,9 +205,9 @@ export function PortfolioValueChart({ portfolioId, accessToken }: PortfolioValue
 
   // Format data for Recharts
   const chartData = data?.snapshots.map((snapshot) => ({
-    date: new Date(snapshot.captured_at).toLocaleDateString(),
-    value: snapshot.total_value,
-    timestamp: snapshot.captured_at,
+    date: new Date(snapshot.snapshot_date).toLocaleDateString(),
+    value: parseFloat(snapshot.total_value),
+    timestamp: snapshot.snapshot_date,
   })) || [];
 
   return (

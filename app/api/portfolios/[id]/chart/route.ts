@@ -378,7 +378,14 @@ export async function GET(
 
     const chartData: Omit<ChartData, 'cached_at'> = {
       interval,
-      snapshots: snapshotData || [],
+      snapshots: (snapshotData || []).map(s => ({
+        snapshot_date: s.snapshot_date,
+        total_value: s.total_value,
+        total_cost: s.total_cost,
+        total_pl: s.total_pl,
+        total_pl_pct: s.total_pl_pct,
+        holdings_count: s.holdings_count,
+      })),
       current_value: currentValue,
       start_value: startValue,
       change_abs: changeAbs,
