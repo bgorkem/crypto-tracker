@@ -1,7 +1,7 @@
 -- Migration: Add calculate_portfolio_snapshots function
 -- Feature: 002-redis-snapshot-optimization
 -- Date: 2025-10-10
--- Purpose: Calculate portfolio snapshots on-demand using window functions
+-- Purpose: Calculate portfolio snapshots on-demand using proper cumulative aggregation
 
 CREATE OR REPLACE FUNCTION calculate_portfolio_snapshots(
   p_portfolio_id UUID,
@@ -28,82 +28,91 @@ BEGIN
     )::date AS snapshot_date
   ),
   
-  -- Calculate cumulative holdings using window functions
-  cumulative_holdings AS (
+  -- For each date, calculate cumulative holdings from all transactions up to that date
+  daily_holdings AS (
     SELECT 
       ds.snapshot_date,
       t.symbol,
-      -- Cumulative quantity (BUY adds, SELL subtracts)
+      -- Sum all transactions up to this date for this symbol
       SUM(
         CASE 
           WHEN t.type = 'BUY' THEN t.quantity 
           ELSE -t.quantity 
         END
-      ) OVER (
-        PARTITION BY t.symbol 
-        ORDER BY ds.snapshot_date
       ) AS quantity,
-      -- Cumulative cost basis
+      -- Sum all costs up to this date for this symbol
       SUM(
         CASE 
           WHEN t.type = 'BUY' THEN t.quantity * t.price_per_unit
           ELSE -t.quantity * t.price_per_unit
         END
-      ) OVER (
-        PARTITION BY t.symbol 
-        ORDER BY ds.snapshot_date
       ) AS cost_basis
     FROM date_series ds
+    CROSS JOIN LATERAL (
+      -- Get distinct symbols that have been traded up to this date
+      SELECT DISTINCT symbol 
+      FROM transactions 
+      WHERE portfolio_id = p_portfolio_id 
+        AND transaction_date::date <= ds.snapshot_date
+    ) symbols
     LEFT JOIN transactions t 
       ON t.portfolio_id = p_portfolio_id 
+      AND t.symbol = symbols.symbol
       AND t.transaction_date::date <= ds.snapshot_date
+    GROUP BY ds.snapshot_date, t.symbol
+    HAVING SUM(
+      CASE 
+        WHEN t.type = 'BUY' THEN t.quantity 
+        ELSE -t.quantity 
+      END
+    ) > 0  -- Only include symbols with positive holdings
   ),
   
-  -- Join with historical prices and calculate values
-  portfolio_values AS (
+  -- Join with historical prices and calculate market values
+  holdings_with_prices AS (
     SELECT 
-      ch.snapshot_date,
-      ch.symbol,
-      ch.quantity,
-      ch.cost_basis,
+      dh.snapshot_date,
+      dh.symbol,
+      dh.quantity,
+      dh.cost_basis,
       pc.price_usd,
-      (ch.quantity * pc.price_usd) AS market_value
-    FROM cumulative_holdings ch
+      (dh.quantity * COALESCE(pc.price_usd, 0)) AS market_value
+    FROM daily_holdings dh
     LEFT JOIN price_cache pc 
-      ON pc.symbol = ch.symbol 
-      AND pc.price_date = ch.snapshot_date
-    WHERE ch.quantity > 0  -- Only holdings with positive quantity
+      ON pc.symbol = dh.symbol 
+      AND pc.price_date = dh.snapshot_date
   ),
   
   -- Aggregate by date
-  daily_aggregates AS (
+  daily_totals AS (
     SELECT 
-      pv.snapshot_date,
-      COALESCE(SUM(pv.market_value), 0) AS total_value,
-      COALESCE(SUM(pv.cost_basis), 0) AS total_cost,
-      COUNT(DISTINCT pv.symbol) FILTER (WHERE pv.quantity > 0) AS holdings_count
-    FROM portfolio_values pv
-    GROUP BY pv.snapshot_date
+      hwp.snapshot_date,
+      COALESCE(SUM(hwp.market_value), 0) AS total_value,
+      COALESCE(SUM(hwp.cost_basis), 0) AS total_cost,
+      COUNT(DISTINCT hwp.symbol) AS holdings_count
+    FROM holdings_with_prices hwp
+    GROUP BY hwp.snapshot_date
   )
   
   -- Final calculation with P/L
   SELECT 
-    da.snapshot_date,
-    da.total_value,
-    da.total_cost,
-    (da.total_value - da.total_cost) AS total_pl,
+    dt.snapshot_date,
+    dt.total_value,
+    dt.total_cost,
+    (dt.total_value - dt.total_cost) AS total_pl,
     CASE 
-      WHEN da.total_cost > 0 
-      THEN ((da.total_value - da.total_cost) / da.total_cost) * 100
+      WHEN dt.total_cost > 0 
+      THEN ((dt.total_value - dt.total_cost) / dt.total_cost) * 100
       ELSE 0 
     END AS total_pl_pct,
-    da.holdings_count::INTEGER
-  FROM daily_aggregates da
-  ORDER BY da.snapshot_date DESC;
+    dt.holdings_count::INTEGER
+  FROM daily_totals dt
+  ORDER BY dt.snapshot_date DESC;
 END;
 $$ LANGUAGE plpgsql STABLE;
 
 -- Add comment for documentation
 COMMENT ON FUNCTION calculate_portfolio_snapshots IS 
-  'Calculates portfolio value snapshots for a date range using window functions. 
-   Returns daily total_value, cost_basis, P/L for charting. Performance: ~200-300ms for 1000 txns.';
+  'Calculates portfolio value snapshots for a date range. 
+   For each date, sums all transactions up to that date to get cumulative position.
+   Returns daily total_value, cost_basis, and P/L for charting.';
