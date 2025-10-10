@@ -18,7 +18,8 @@
     "db:migrate": "supabase db push",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
-    "backfill:prices": "npx tsx scripts/backfill-price-cache.ts"
+    "backfill:prices": "npx tsx scripts/backfill-price-cache.ts",
+    "cache:clear": "npx tsx scripts/clear-cache.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

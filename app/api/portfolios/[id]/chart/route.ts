@@ -366,9 +366,15 @@ export async function GET(
     // 5. Fetch current value
     const currentValue = await fetchCurrentValue(supabase, portfolioId);
 
-    // 6. Build ChartData response
-    const startValue = snapshotData && snapshotData.length > 0 
-      ? snapshotData[0].total_value 
+    // 6. Sort snapshots by date ascending (oldest first) for correct chart display
+    const sortedSnapshots = (snapshotData || []).sort((a, b) => 
+      a.snapshot_date.localeCompare(b.snapshot_date)
+    );
+
+    // 7. Build ChartData response
+    // Start value should be the OLDEST snapshot's total_value
+    const startValue = sortedSnapshots.length > 0 
+      ? sortedSnapshots[0].total_value 
       : '0';
 
     const changeAbs = (parseFloat(currentValue) - parseFloat(startValue)).toFixed(2);
@@ -378,7 +384,7 @@ export async function GET(
 
     const chartData: Omit<ChartData, 'cached_at'> = {
       interval,
-      snapshots: (snapshotData || []).map(s => ({
+      snapshots: sortedSnapshots.map(s => ({
         snapshot_date: s.snapshot_date,
         total_value: s.total_value,
         total_cost: s.total_cost,
@@ -392,7 +398,7 @@ export async function GET(
       change_pct: changePct,
     };
 
-    // 7. Cache the result (async, don't await)
+    // 8. Cache the result (async, don't await)
     CacheService.setChartData(portfolioId, interval, chartData).catch((err) => {
       console.error('Failed to cache chart data:', err);
     });
