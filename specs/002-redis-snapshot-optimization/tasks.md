@@ -99,44 +99,45 @@
 **Description**: Create Vercel KV database named "crypto-tracker-cache" in same region as deployment, verify environment variables auto-injected (KV_URL, KV_REST_API_URL, KV_REST_API_TOKEN, KV_REST_API_READ_ONLY_TOKEN)
 **Dependencies**: None
 **Validation**: Environment variables available in Vercel, can connect locally
+**Note**: ⚠️ Manual step - requires Vercel dashboard access
 
-### T009: Install @vercel/kv dependency
+### T009: Install @vercel/kv dependency ✅
 **Files**: `package.json`
 **Description**: Add @vercel/kv@^2.0.0 to dependencies, run npm install
 **Dependencies**: None
 **Validation**: Package installed, no peer dependency warnings
 
-### T010: Create Redis client library
+### T010: Create Redis client library ✅
 **Files**: `lib/redis.ts`
 **Description**: Implement CacheService class with methods: getChartData(portfolioId, interval), setChartData(portfolioId, interval, data), invalidatePortfolio(portfolioId). Include CACHE_KEYS patterns for namespacing, ChartData interface, error handling with fallback to null
 **Dependencies**: T009
 **Validation**: Module exports CacheService, kv, CACHE_KEYS, ChartData interface
 
-### T011 [P]: Unit test CacheService.getChartData cache miss
+### T011 [P]: Unit test CacheService.getChartData cache miss ✅
 **Files**: `__tests__/unit/redis-cache.test.ts`
 **Description**: Mock @vercel/kv, test getChartData returns null when key not found, verify correct cache key format used
 **Dependencies**: T010
 **Validation**: Test written and passes
 
-### T012 [P]: Unit test CacheService.getChartData cache hit
+### T012 [P]: Unit test CacheService.getChartData cache hit ✅
 **Files**: `__tests__/unit/redis-cache.test.ts`
 **Description**: Mock @vercel/kv to return JSON string, test getChartData parses and returns ChartData object
 **Dependencies**: T010
 **Validation**: Test written and passes
 
-### T013 [P]: Unit test CacheService.getChartData graceful fallback
+### T013 [P]: Unit test CacheService.getChartData graceful fallback ✅
 **Files**: `__tests__/unit/redis-cache.test.ts`
 **Description**: Mock @vercel/kv to throw error, test getChartData returns null (graceful degradation when Redis unavailable)
 **Dependencies**: T010
 **Validation**: Test written and passes, error logged
 
-### T014 [P]: Unit test CacheService.invalidatePortfolio
+### T014 [P]: Unit test CacheService.invalidatePortfolio ✅
 **Files**: `__tests__/unit/redis-cache.test.ts`
 **Description**: Test invalidatePortfolio calls kv.del() for all 5 interval keys (24h, 7d, 30d, 90d, all) atomically
 **Dependencies**: T010
 **Validation**: Test written and passes, 5 del calls verified
 
-### T015: Create metrics library
+### T015: Create metrics library ✅
 **Files**: `lib/metrics.ts`
 **Description**: Implement chartMetrics helper with methods: cacheHit, cacheMiss, cacheInvalidation, dbFunctionLatency. Log structured JSON with portfolioId, interval, timestamp for monitoring
 **Dependencies**: None
