@@ -1,9 +1,36 @@
 /**
- * Redis cache client for portfolio chart data
- * Uses Vercel KV (Redis) for fast, ephemeral caching
+ * Redis cache for portfolio chart data
+ * Provides 5-minute cache TTL to reduce database load
  */
 
-import { kv } from '@vercel/kv';
+import { createClient } from 'redis';
+
+// Create Redis client with connection string
+const redisClient = createClient({
+  url: process.env.REDIS_URL,
+});
+
+// Track connection state
+let isConnecting = false;
+let isConnected = false;
+
+/**
+ * Get connected Redis client with lazy initialization
+ */
+async function getRedis() {
+  if (isConnected) {
+    return redisClient;
+  }
+  
+  if (!isConnecting) {
+    isConnecting = true;
+    await redisClient.connect();
+    isConnected = true;
+    isConnecting = false;
+  }
+  
+  return redisClient;
+}
 
 /**
  * Chart data structure stored in Redis cache
@@ -64,8 +91,9 @@ export class CacheService {
     interval: ChartData['interval']
   ): Promise<ChartData | null> {
     try {
+      const redis = await getRedis();
       const key = CACHE_KEYS.chartData(portfolioId, interval);
-      const cached = await kv.get<string>(key);
+      const cached = await redis.get(key);
 
       if (!cached) {
         return null;
@@ -94,6 +122,7 @@ export class CacheService {
     data: Omit<ChartData, 'cached_at'>
   ): Promise<void> {
     try {
+      const redis = await getRedis();
       const key = CACHE_KEYS.chartData(portfolioId, interval);
       
       // Add cached_at timestamp
@@ -102,9 +131,9 @@ export class CacheService {
         cached_at: new Date().toISOString(),
       };
 
-      // Store as JSON string with TTL
-      await kv.set(key, JSON.stringify(cacheData), {
-        ex: CACHE_TTL,
+      // Store as JSON string with TTL (EX option for seconds)
+      await redis.set(key, JSON.stringify(cacheData), {
+        EX: CACHE_TTL,
       });
     } catch (error) {
       // Graceful degradation: log error but don't throw
@@ -121,12 +150,13 @@ export class CacheService {
    */
   static async invalidatePortfolio(portfolioId: string): Promise<void> {
     try {
+      const redis = await getRedis();
       // Delete all 5 interval keys for this portfolio
       const intervals: ChartData['interval'][] = ['24h', '7d', '30d', '90d', 'all'];
       const keys = intervals.map(interval => CACHE_KEYS.chartData(portfolioId, interval));
 
       // Delete all keys atomically
-      await kv.del(...keys);
+      await redis.del(keys);
     } catch (error) {
       // Log error but don't throw - cache invalidation failures are non-critical
       console.error('Redis cache invalidation error:', error);
@@ -134,5 +164,5 @@ export class CacheService {
   }
 }
 
-// Export kv client for direct access if needed
-export { kv };
+// Export redis client for direct access if needed
+export { redisClient as redis };

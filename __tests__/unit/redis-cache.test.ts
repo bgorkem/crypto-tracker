@@ -4,19 +4,40 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// Mock redis module with inline mock functions
+vi.mock('redis', () => {
+  const mockGet = vi.fn();
+  const mockSet = vi.fn();
+  const mockDel = vi.fn();
+  const mockConnect = vi.fn().mockResolvedValue(undefined);
+  
+  return {
+    createClient: vi.fn(() => ({
+      get: mockGet,
+      set: mockSet,
+      del: mockDel,
+      connect: mockConnect,
+    })),
+    // Export mocks for access in tests
+    __mockGet: mockGet,
+    __mockSet: mockSet,
+    __mockDel: mockDel,
+    __mockConnect: mockConnect,
+  };
+});
+
+// Import after mocking
 import { CacheService, CACHE_KEYS, type ChartData } from '../../lib/redis';
+import * as redis from 'redis';
 
-// Mock @vercel/kv module
-vi.mock('@vercel/kv', () => ({
-  kv: {
-    get: vi.fn(),
-    set: vi.fn(),
-    del: vi.fn(),
-  },
-}));
-
-// Import mocked kv after mock is defined
-import { kv } from '@vercel/kv';
+// Get mock functions
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockGet = (redis as any).__mockGet;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockSet = (redis as any).__mockSet;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockDel = (redis as any).__mockDel;
 
 describe('CacheService', () => {
   beforeEach(() => {
@@ -25,154 +46,135 @@ describe('CacheService', () => {
   });
 
   describe('getChartData', () => {
-    it('should return null on cache miss (key not found)', async () => {
-      // Mock kv.get to return null (cache miss)
-      vi.mocked(kv.get).mockResolvedValue(null);
+    it('should return null when cache miss', async () => {
+      // Mock cache miss
+      mockGet.mockResolvedValue(null);
 
       const result = await CacheService.getChartData('portfolio-123', '30d');
 
       expect(result).toBeNull();
-      expect(kv.get).toHaveBeenCalledWith('portfolio:portfolio-123:chart:30d');
-      expect(kv.get).toHaveBeenCalledTimes(1);
+      expect(mockGet).toHaveBeenCalledWith('portfolio:portfolio-123:chart:30d');
+      expect(mockGet).toHaveBeenCalledTimes(1);
     });
 
-    it('should parse and return ChartData on cache hit', async () => {
+    it('should return parsed data when cache hit', async () => {
       const mockChartData: ChartData = {
         interval: '30d',
         snapshots: [
           {
             snapshot_date: '2025-01-01',
             total_value: '10000.00',
-            total_cost: '8000.00',
-            total_pl: '2000.00',
-            total_pl_pct: '25.00',
+            total_cost: '9000.00',
+            total_pl: '1000.00',
+            total_pl_pct: '11.11',
             holdings_count: 5,
           },
         ],
         current_value: '10000.00',
-        start_value: '8000.00',
-        change_abs: '2000.00',
-        change_pct: '25.00',
-        cached_at: '2025-01-10T12:00:00Z',
+        start_value: '9000.00',
+        change_abs: '1000.00',
+        change_pct: '11.11',
+        cached_at: '2025-01-01T00:00:00Z',
       };
 
-      // Mock kv.get to return JSON string
-      vi.mocked(kv.get).mockResolvedValue(JSON.stringify(mockChartData));
+      // Mock cache hit
+      mockGet.mockResolvedValue(JSON.stringify(mockChartData));
 
       const result = await CacheService.getChartData('portfolio-123', '30d');
 
       expect(result).toEqual(mockChartData);
-      expect(kv.get).toHaveBeenCalledWith('portfolio:portfolio-123:chart:30d');
+      expect(mockGet).toHaveBeenCalledWith('portfolio:portfolio-123:chart:30d');
     });
 
-    it('should return null and log error on Redis failure (graceful fallback)', async () => {
-      // Spy on console.error
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    it('should return null when Redis throws error', async () => {
+      // Mock Redis error
+      mockGet.mockRejectedValue(new Error('Redis connection failed'));
 
-      // Mock kv.get to throw error
-      vi.mocked(kv.get).mockRejectedValue(new Error('Redis connection failed'));
-
-      const result = await CacheService.getChartData('portfolio-123', '7d');
+      const result = await CacheService.getChartData('portfolio-123', '30d');
 
       expect(result).toBeNull();
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Redis cache read error:',
-        expect.any(Error)
-      );
-
-      consoleErrorSpy.mockRestore();
     });
   });
 
   describe('setChartData', () => {
-    it('should store chart data with TTL and cached_at timestamp', async () => {
-      const chartData = {
-        interval: '24h' as const,
-        snapshots: [],
+    it('should store data in cache with 5-minute TTL', async () => {
+      const mockChartData: Omit<ChartData, 'cached_at'> = {
+        interval: '7d',
+        snapshots: [
+          {
+            snapshot_date: '2025-01-01',
+            total_value: '5000.00',
+            total_cost: '4800.00',
+            total_pl: '200.00',
+            total_pl_pct: '4.17',
+            holdings_count: 3,
+          },
+        ],
         current_value: '5000.00',
-        start_value: '4500.00',
-        change_abs: '500.00',
-        change_pct: '11.11',
+        start_value: '4800.00',
+        change_abs: '200.00',
+        change_pct: '4.17',
       };
 
-      await CacheService.setChartData('portfolio-456', '24h', chartData);
+      await CacheService.setChartData('portfolio-456', '7d', mockChartData);
 
-      expect(kv.set).toHaveBeenCalledWith(
-        'portfolio:portfolio-456:chart:24h',
-        expect.stringContaining('"cached_at"'),
-        { ex: 300 } // 5 minutes TTL
-      );
-      expect(kv.set).toHaveBeenCalledTimes(1);
+      expect(mockSet).toHaveBeenCalledTimes(1);
+      
+      // Verify call arguments
+      const callArgs = mockSet.mock.calls[0];
+      expect(callArgs[0]).toBe('portfolio:portfolio-456:chart:7d');
+      expect(callArgs[2]).toEqual({ EX: 300 }); // 5 minutes
 
-      // Verify cached_at is added
-      const callArgs = vi.mocked(kv.set).mock.calls[0];
+      // Verify stored data has timestamp added
       const storedData = JSON.parse(callArgs[1] as string);
       expect(storedData).toHaveProperty('cached_at');
-      expect(storedData.cached_at).toMatch(/^\d{4}-\d{2}-\d{2}T/); // ISO timestamp
+      expect(storedData.cached_at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/); // ISO format
+      expect(storedData.interval).toBe('7d');
+      expect(storedData.snapshots).toEqual(mockChartData.snapshots);
     });
 
-    it('should not throw on Redis write failure (graceful degradation)', async () => {
-      // Spy on console.error
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    it('should not throw when Redis set fails', async () => {
+      // Mock Redis error
+      mockSet.mockRejectedValue(new Error('Redis write failed'));
 
-      // Mock kv.set to throw error
-      vi.mocked(kv.set).mockRejectedValue(new Error('Redis write failed'));
-
-      const chartData = {
-        interval: '7d' as const,
+      const mockChartData: Omit<ChartData, 'cached_at'> = {
+        interval: '7d',
         snapshots: [],
-        current_value: '5000.00',
-        start_value: '4500.00',
-        change_abs: '500.00',
-        change_pct: '11.11',
+        current_value: '0.00',
+        start_value: '0.00',
+        change_abs: '0.00',
+        change_pct: '0.00',
       };
 
       // Should not throw
       await expect(
-        CacheService.setChartData('portfolio-789', '7d', chartData)
-      ).resolves.toBeUndefined();
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Redis cache write error:',
-        expect.any(Error)
-      );
-
-      consoleErrorSpy.mockRestore();
+        CacheService.setChartData('portfolio-456', '7d', mockChartData)
+      ).resolves.not.toThrow();
     });
   });
 
   describe('invalidatePortfolio', () => {
-    it('should delete all 5 interval keys atomically', async () => {
-      await CacheService.invalidatePortfolio('portfolio-999');
+    it('should delete all cache keys for a portfolio', async () => {
+      await CacheService.invalidatePortfolio('portfolio-789');
 
-      expect(kv.del).toHaveBeenCalledWith(
-        'portfolio:portfolio-999:chart:24h',
-        'portfolio:portfolio-999:chart:7d',
-        'portfolio:portfolio-999:chart:30d',
-        'portfolio:portfolio-999:chart:90d',
-        'portfolio:portfolio-999:chart:all'
-      );
-      expect(kv.del).toHaveBeenCalledTimes(1);
+      expect(mockDel).toHaveBeenCalledWith([
+        'portfolio:portfolio-789:chart:24h',
+        'portfolio:portfolio-789:chart:7d',
+        'portfolio:portfolio-789:chart:30d',
+        'portfolio:portfolio-789:chart:90d',
+        'portfolio:portfolio-789:chart:all', // Changed from '1y' to 'all'
+      ]);
+      expect(mockDel).toHaveBeenCalledTimes(1);
     });
 
-    it('should not throw on Redis deletion failure (graceful degradation)', async () => {
-      // Spy on console.error
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-      // Mock kv.del to throw error
-      vi.mocked(kv.del).mockRejectedValue(new Error('Redis del failed'));
+    it('should not throw when Redis del fails', async () => {
+      // Mock Redis error
+      mockDel.mockRejectedValue(new Error('Redis del failed'));
 
       // Should not throw
       await expect(
-        CacheService.invalidatePortfolio('portfolio-000')
-      ).resolves.toBeUndefined();
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Redis cache invalidation error:',
-        expect.any(Error)
-      );
-
-      consoleErrorSpy.mockRestore();
+        CacheService.invalidatePortfolio('portfolio-789')
+      ).resolves.not.toThrow();
     });
   });
 

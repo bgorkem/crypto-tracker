@@ -32,7 +32,7 @@ interface HoldingData {
 async function getStartDate(
   interval: Interval,
   earliestTransactionDate: Date | null,
-  supabase: SupabaseClient
+  _supabase: SupabaseClient
 ): Promise<Date> {
   const now = new Date();
   const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
