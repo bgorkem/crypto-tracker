@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAuthenticatedClient } from '@/lib/supabase';
 import { sanitizeInput } from '@/lib/sanitize';
+import { CacheService } from '@/lib/redis';
 
 async function validatePortfolioAccess(
   token: string | undefined,
@@ -229,6 +230,10 @@ export async function POST(
     );
   }
 
+  // T022: Invalidate cache after successful transaction creation
+  // This ensures chart data is recalculated on next request
+  await CacheService.invalidatePortfolio(portfolioId);
+
   // Map response back to use 'side' instead of 'type'
   const responseData = {
     ...transaction,
@@ -283,6 +288,9 @@ export async function DELETE(
       { status: 500 }
     );
   }
+
+  // Invalidate cache after successful bulk deletion
+  await CacheService.invalidatePortfolio(portfolioId);
 
   return new NextResponse(null, { status: 204 });
 }

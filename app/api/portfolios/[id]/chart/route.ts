@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAuthenticatedClient } from '@/lib/supabase';
+import { CacheService, type ChartData } from '@/lib/redis';
+import { chartMetrics } from '@/lib/metrics';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 type Interval = '24h' | '7d' | '30d' | '90d' | 'all';
-
-interface Snapshot {
-  snapshot_date: string;
-  total_value: number;
-}
 
 interface Transaction {
   symbol: string;
@@ -29,19 +26,20 @@ interface HoldingData {
 }
 
 /**
- * Calculate start date based on interval
+ * Calculate start date based on interval with 1-year maximum cap
+ * T019: Implements getStartDate helper function
  */
 async function getStartDate(
-  interval: Interval, 
-  portfolioId: string,
+  interval: Interval,
+  earliestTransactionDate: Date | null,
   supabase: SupabaseClient
 ): Promise<Date> {
   const now = new Date();
-  
+  const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+
   switch (interval) {
     case '24h':
-      // For daily snapshots, show last 2 days to ensure we have data points
-      return new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+      return new Date(now.getTime() - 24 * 60 * 60 * 1000);
     case '7d':
       return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     case '30d':
@@ -49,21 +47,14 @@ async function getStartDate(
     case '90d':
       return new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
     case 'all': {
-      // Get the earliest snapshot date for this portfolio
-      const { data: earliestSnapshot } = await supabase
-        .from('portfolio_snapshots')
-        .select('snapshot_date')
-        .eq('portfolio_id', portfolioId)
-        .order('snapshot_date', { ascending: true })
-        .limit(1)
-        .single();
-
-      if (earliestSnapshot) {
-        return new Date(earliestSnapshot.snapshot_date);
+      // Cap 'all' interval at 1 year to prevent expensive calculations
+      // Use Math.max to get the more recent date (less data to compute)
+      if (earliestTransactionDate) {
+        return new Date(
+          Math.max(earliestTransactionDate.getTime(), oneYearAgo.getTime())
+        );
       }
-      
-      // Fallback to 1 year ago if no snapshots
-      return new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+      return oneYearAgo;
     }
   }
 }
@@ -131,11 +122,13 @@ function calculateCurrentValue(
 
 /**
  * Fetch current portfolio value
+ * T020: Implements fetchCurrentValue helper function
  */
 async function fetchCurrentValue(
   supabase: SupabaseClient,
   portfolioId: string
-): Promise<number> {
+): Promise<string> {
+  // Fetch all transactions for holdings calculation
   const { data: transactions } = await supabase
     .from('transactions')
     .select('symbol, type, quantity, price_per_unit, transaction_date')
@@ -144,45 +137,26 @@ async function fetchCurrentValue(
 
   const holdingsMap = calculateHoldings((transactions as Transaction[]) || []);
 
+  // Get symbols with positive holdings
   const symbols = Array.from(holdingsMap.keys()).filter((symbol: string) => {
     const data = holdingsMap.get(symbol)!;
     return data.total_quantity > 0;
   });
 
+  if (symbols.length === 0) {
+    return '0';
+  }
+
+  // Fetch current prices for all held symbols
   const { data: prices } = await supabase
     .from('price_cache')
     .select('symbol, price_usd')
-    .in('symbol', symbols.length > 0 ? symbols : ['']);
+    .in('symbol', symbols);
 
-  return calculateCurrentValue(holdingsMap, (prices as PriceData[]) || []);
-}
-
-/**
- * Check if snapshots exist for portfolio, log warning if missing
- */
-function validateSnapshots(
-  snapshots: Snapshot[] | null,
-  portfolioId: string
-): { valid: boolean; message?: string } {
-  if (!snapshots || snapshots.length === 0) {
-    console.warn(
-      `[Chart API] No snapshots found for portfolio ${portfolioId}. ` +
-      'Historical price tracking may not be set up. Run backfill script: npm run backfill:snapshots'
-    );
-    return { 
-      valid: false, 
-      message: 'No historical data available. Run backfill script to generate snapshots.' 
-    };
-  }
-
-  if (snapshots.length === 1) {
-    console.warn(
-      `[Chart API] Only one snapshot found for portfolio ${portfolioId}. ` +
-      'Daily snapshot function may not be running.'
-    );
-  }
-
-  return { valid: true };
+  const currentValue = calculateCurrentValue(holdingsMap, (prices as PriceData[]) || []);
+  
+  // Return as string for consistency with database NUMERIC type
+  return currentValue.toFixed(2);
 }
 
 /**
@@ -192,7 +166,7 @@ async function authenticateAndVerify(
   token: string | undefined,
   portfolioId: string
 ): Promise<
-  | { success: true; supabase: SupabaseClient; portfolio: { id: string; name: string; created_at: string } }
+  | { success: true; supabase: SupabaseClient; portfolio: { id: string; name: string; created_at: string; user_id: string } }
   | { success: false; response: NextResponse }
 > {
   if (!token) {
@@ -223,17 +197,27 @@ async function authenticateAndVerify(
 
   const { data: portfolio, error: portfolioError } = await supabase
     .from('portfolios')
-    .select('id, name, created_at')
+    .select('id, name, created_at, user_id')
     .eq('id', portfolioId)
-    .eq('user_id', user.id)
     .single();
 
   if (portfolioError || !portfolio) {
     return {
       success: false,
       response: NextResponse.json(
-        { error: { code: 'NOT_FOUND', message: 'Portfolio not found' } },
+        { error: { code: 'PORTFOLIO_NOT_FOUND', message: 'Portfolio not found' } },
         { status: 404 }
+      ),
+    };
+  }
+
+  // Check ownership
+  if (portfolio.user_id !== user.id) {
+    return {
+      success: false,
+      response: NextResponse.json(
+        { error: { code: 'FORBIDDEN', message: 'You do not have access to this portfolio' } },
+        { status: 403 }
       ),
     };
   }
@@ -267,7 +251,8 @@ function validateInterval(interval: string | null): { valid: true; interval: Int
 
 /**
  * GET /api/portfolios/:id/chart
- * Fetch portfolio value snapshots for charting
+ * Fetch portfolio value snapshots for charting with Redis caching
+ * T021: Complete API route with Redis caching integration
  * 
  * Path params:
  * - id: Portfolio ID
@@ -275,6 +260,7 @@ function validateInterval(interval: string | null): { valid: true; interval: Int
  * Query params:
  * - interval: Time interval (24h, 7d, 30d, 90d, all)
  */
+// eslint-disable-next-line complexity
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -305,68 +291,107 @@ export async function GET(
   const interval = intervalResult.interval;
 
   try {
-    const startDate = await getStartDate(interval, portfolioId, supabase);
+    // 1. Check cache first
+    const cachedData = await CacheService.getChartData(portfolioId, interval);
+    
+    if (cachedData) {
+      chartMetrics.cacheHit(portfolioId, interval, cachedData.cached_at);
+      
+      return NextResponse.json({
+        data: cachedData,
+      });
+    }
 
-    const { data: snapshots, error: snapshotsError } = await supabase
-      .from('portfolio_snapshots')
-      .select('snapshot_date, total_value')
-      .eq('portfolio_id', portfolioId)
-      .gte('snapshot_date', startDate.toISOString())
-      .order('snapshot_date', { ascending: true });
+    chartMetrics.cacheMiss(portfolioId, interval, 'not_found');
 
+    // 2. Fetch earliest transaction date for 'all' interval cap
+    let earliestTransactionDate: Date | null = null;
+    
+    if (interval === 'all') {
+      const { data: earliestTx } = await supabase
+        .from('transactions')
+        .select('transaction_date')
+        .eq('portfolio_id', portfolioId)
+        .order('transaction_date', { ascending: true })
+        .limit(1)
+        .single();
+
+      if (earliestTx) {
+        earliestTransactionDate = new Date(earliestTx.transaction_date);
+      }
+    }
+
+    // 3. Calculate start date with 1-year cap for 'all'
+    const startDate = await getStartDate(interval, earliestTransactionDate, supabase);
+    const endDate = new Date(); // Now
+
+    // 4. Call PostgreSQL calculate_portfolio_snapshots function
+    const startTime = Date.now();
+    
+    const { data: snapshots, error: snapshotsError } = await supabase.rpc(
+      'calculate_portfolio_snapshots',
+      {
+        p_portfolio_id: portfolioId,
+        p_start_date: startDate.toISOString().split('T')[0], // YYYY-MM-DD
+        p_end_date: endDate.toISOString().split('T')[0], // YYYY-MM-DD
+      }
+    );
+
+    const latency = Date.now() - startTime;
+    
     if (snapshotsError) {
-      console.error('Error fetching snapshots:', snapshotsError);
+      console.error('Error calling calculate_portfolio_snapshots:', snapshotsError);
       return NextResponse.json(
         { error: { code: 'FETCH_FAILED', message: 'Failed to fetch chart data' } },
         { status: 500 }
       );
     }
 
-    // Validate snapshots exist
-    const validation = validateSnapshots(snapshots, portfolioId);
-    if (!validation.valid) {
-      // Return empty chart data with warning
-      return NextResponse.json({
-        data: {
-          interval,
-          snapshots: [],
-          current_value: 0,
-          start_value: 0,
-          change_abs: 0,
-          change_pct: 0,
-          warning: validation.message,
-        },
-      });
-    }
+    const snapshotData = snapshots as Array<{
+      snapshot_date: string;
+      total_value: string;
+      total_cost: string;
+      total_pl: string;
+      total_pl_pct: string;
+      holdings_count: number;
+    }>;
 
-    // Use real snapshot data
-    const snapshotsData = snapshots.map((s: Snapshot) => ({
-      captured_at: s.snapshot_date,
-      total_value: s.total_value,
-    }));
+    chartMetrics.dbFunctionLatency(
+      portfolioId,
+      interval,
+      latency,
+      snapshotData?.length || 0
+    );
 
-    const startValue = snapshots[0].total_value;
+    // 5. Fetch current value
     const currentValue = await fetchCurrentValue(supabase, portfolioId);
 
-    // Add current value as the latest data point
-    const now = new Date().toISOString();
-    snapshotsData.push({
-      captured_at: now,
-      total_value: currentValue,
+    // 6. Build ChartData response
+    const startValue = snapshotData && snapshotData.length > 0 
+      ? snapshotData[0].total_value 
+      : '0';
+
+    const changeAbs = (parseFloat(currentValue) - parseFloat(startValue)).toFixed(2);
+    const changePct = parseFloat(startValue) > 0 
+      ? ((parseFloat(changeAbs) / parseFloat(startValue)) * 100).toFixed(2)
+      : '0.00';
+
+    const chartData: Omit<ChartData, 'cached_at'> = {
+      interval,
+      snapshots: snapshotData || [],
+      current_value: currentValue,
+      start_value: startValue,
+      change_abs: changeAbs,
+      change_pct: changePct,
+    };
+
+    // 7. Cache the result (async, don't await)
+    CacheService.setChartData(portfolioId, interval, chartData).catch((err) => {
+      console.error('Failed to cache chart data:', err);
     });
 
-    const changeAbs = currentValue - startValue;
-    const changePct = startValue > 0 ? (changeAbs / startValue) * 100 : 0;
-
     return NextResponse.json({
-      data: {
-        interval,
-        snapshots: snapshotsData,
-        current_value: currentValue,
-        start_value: startValue,
-        change_abs: changeAbs,
-        change_pct: changePct,
-      },
+      data: chartData,
     });
   } catch (error) {
     console.error('Error generating portfolio chart data:', error);

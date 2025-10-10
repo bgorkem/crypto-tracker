@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAuthenticatedClient } from '@/lib/supabase';
 import { sanitizeInput } from '@/lib/sanitize';
+import { CacheService } from '@/lib/redis';
 
 interface Transaction {
   symbol: string;
@@ -282,6 +283,9 @@ export async function DELETE(
 
   const { error } = await authenticateAndCheckOwnership(token, id);
   if (error) return error;
+
+  // T025: Invalidate cache BEFORE portfolio deletion to clean up orphaned cache keys
+  await CacheService.invalidatePortfolio(id);
 
   // Delete portfolio (transactions cascade automatically)
   const supabase = createAuthenticatedClient(token!);

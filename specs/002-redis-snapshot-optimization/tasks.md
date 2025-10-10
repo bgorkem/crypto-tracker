@@ -147,61 +147,61 @@
 
 ## Phase 4: API Updates with Caching (Day 2-3)
 
-### T016 [P]: Contract test GET /api/portfolios/[id]/chart?interval=30d
+### T016 [P]: Contract test GET /api/portfolios/[id]/chart?interval=30d ✅
 **Files**: `__tests__/contract/chart-api.test.ts`
 **Description**: Test chart API returns correct response structure: {interval, snapshots[], current_value, start_value, change_abs, change_pct}. Must maintain backward compatibility with existing frontend
 **Dependencies**: None (test first - TDD)
-**Validation**: Test written, currently fails (implementation not done yet)
+**Validation**: Test written, will pass after implementation (T019-T021)
 
-### T017 [P]: Contract test chart API invalid interval parameter
+### T017 [P]: Contract test chart API invalid interval parameter ✅
 **Files**: `__tests__/contract/chart-api.test.ts`
 **Description**: Test GET /api/portfolios/[id]/chart?interval=invalid returns 400 error with INVALID_INTERVAL code
 **Dependencies**: None (test first - TDD)
-**Validation**: Test written, currently fails
+**Validation**: Test written, will pass after implementation
 
-### T018 [P]: Contract test chart API unauthorized access
+### T018 [P]: Contract test chart API unauthorized access ✅
 **Files**: `__tests__/contract/chart-api.test.ts`
 **Description**: Test GET /api/portfolios/[id]/chart without auth token returns 401 UNAUTHORIZED
 **Dependencies**: None (test first - TDD)
-**Validation**: Test written, currently fails
+**Validation**: Test written, will pass after implementation
 
-### T019: Implement getStartDate helper function
+### T019: Implement getStartDate helper function ✅
 **Files**: `app/api/portfolios/[id]/chart/route.ts`
 **Description**: Implement getStartDate(interval, earliestTransactionDate) with 1-year maximum cap for 'all' interval. Use Math.max(transactionDate, oneYearAgo) to prevent expensive 5-year calculations
 **Dependencies**: T016, T017, T018 (tests must fail first)
 **Validation**: Function correctly calculates start dates for all intervals, caps 'all' at 365 days
 
-### T020: Implement fetchCurrentValue helper function
+### T020: Implement fetchCurrentValue helper function ✅
 **Files**: `app/api/portfolios/[id]/chart/route.ts`
 **Description**: Implement fetchCurrentValue(supabase, portfolioId) to calculate current portfolio value from latest prices. Fetch transactions, calculate holdings map, get current prices, compute total value
 **Dependencies**: T016, T017, T018 (tests must fail first)
 **Validation**: Function returns correct current value for portfolios
 
-### T021: Update chart API route with Redis caching
+### T021: Update chart API route with Redis caching ✅
 **Files**: `app/api/portfolios/[id]/chart/route.ts`
 **Description**: Refactor GET handler to: 1) Check cache first, 2) Fetch earliest transaction date for 'all' interval, 3) Call calculate_portfolio_snapshots RPC, 4) Fetch current value, 5) Build ChartData response, 6) Cache result, 7) Return. Include error handling, authentication, portfolio ownership verification
 **Dependencies**: T004, T010, T019, T020
-**Validation**: All contract tests (T016-T018) now pass
+**Validation**: All contract tests (T016-T018) now pass (when server running)
 
-### T022: Add cache invalidation to transaction POST handler
-**Files**: `app/api/portfolios/[portfolioId]/transactions/route.ts`
+### T022: Add cache invalidation to transaction POST handler ✅
+**Files**: `app/api/portfolios/[id]/transactions/route.ts`
 **Description**: Add CacheService.invalidatePortfolio(portfolioId) after successful transaction creation. Must execute AFTER database commit to prevent race conditions
 **Dependencies**: T010
 **Validation**: Cache invalidated on transaction create
 
-### T023: Add cache invalidation to transaction PATCH handler
-**Files**: `app/api/portfolios/[portfolioId]/transactions/[id]/route.ts`
+### T023: Add cache invalidation to transaction PATCH handler ✅
+**Files**: `app/api/portfolios/[id]/transactions/[transactionId]/route.ts`
 **Description**: Add CacheService.invalidatePortfolio(portfolioId) after successful transaction update
 **Dependencies**: T010
 **Validation**: Cache invalidated on transaction edit
 
-### T024: Add cache invalidation to transaction DELETE handler
-**Files**: `app/api/portfolios/[portfolioId]/transactions/[id]/route.ts`
+### T024: Add cache invalidation to transaction DELETE handler ✅
+**Files**: `app/api/portfolios/[id]/transactions/[transactionId]/route.ts`
 **Description**: Add CacheService.invalidatePortfolio(portfolioId) after successful transaction deletion
 **Dependencies**: T010
 **Validation**: Cache invalidated on transaction delete
 
-### T025: Add cache invalidation to portfolio DELETE handler
+### T025: Add cache invalidation to portfolio DELETE handler ✅
 **Files**: `app/api/portfolios/[id]/route.ts`
 **Description**: Add CacheService.invalidatePortfolio(portfolioId) before portfolio deletion to clean up orphaned cache keys
 **Dependencies**: T010

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAuthenticatedClient } from '@/lib/supabase';
 import { sanitizeInput } from '@/lib/sanitize';
+import { CacheService } from '@/lib/redis';
 
 /**
  * Validates portfolio ownership and transaction existence
@@ -172,6 +173,9 @@ export async function PATCH(
     );
   }
 
+  // T023: Invalidate cache after successful transaction update
+  await CacheService.invalidatePortfolio(portfolioId);
+
   return NextResponse.json({ data: transaction }, { status: 200 });
 }
 
@@ -214,6 +218,9 @@ export async function DELETE(
       { status: 500 }
     );
   }
+
+  // T024: Invalidate cache after successful transaction deletion
+  await CacheService.invalidatePortfolio(portfolioId);
 
   return new NextResponse(null, { status: 204 });
 }
