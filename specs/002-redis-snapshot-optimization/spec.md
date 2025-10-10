@@ -16,7 +16,7 @@ Template steps conceptually satisfied by drafting below. Ambiguities explicitly 
 - Q: Which Redis service should be used for Vercel deployment? → A: Vercel KV (primary) or Upstash (alternative) - both serverless-compatible
 - Q: Should cached data have a TTL or rely only on mutation-based invalidation? → A: Mutation-based only (no TTL) to prevent stale data
 - Q: What happens if Redis is unavailable? → A: Graceful fallback - calculate on-demand using database function (slower but functional)
-- Q: Should we maintain the portfolio_snapshots table during migration? → A: Yes, keep for 30 days as backup during gradual rollout
+- Q: Should we maintain the portfolio_snapshots table during migration? → A: No we need to remove it, there is no user at the moment, no risk of data loss.
 - Q: What cache hit rate should we target? → A: ≥80% after warm-up period
 
 ---
@@ -48,7 +48,7 @@ As a portfolio owner who adds back-dated transactions, I need my portfolio chart
 7. **Given** Redis service is temporarily unavailable, **When** a user requests their portfolio chart, **Then** the system falls back to database calculation and returns data within 500ms with a warning indicator.
 8. **Given** a portfolio with 1000+ transactions spanning 5 years, **When** calculating "All Time" interval, **Then** the database function completes within 500ms.
 9. **Given** multiple users accessing different portfolios simultaneously, **When** they request chart data, **Then** each request is served independently without queuing or blocking.
-10. **Given** a new deployment removes all cached data, **When** users start accessing their charts, **Then** the cache rebuilds transparently without errors or degraded user experience.
+10. **Given** a new deployment with Redis cache implementation, **When** users start accessing their charts, **Then** the cache builds transparently without errors or degraded user experience (no old snapshots to migrate).
 
 ### Edge Cases
 - Portfolio with zero transactions → Show "No data available" message
@@ -78,8 +78,8 @@ As a portfolio owner who adds back-dated transactions, I need my portfolio chart
 - **FR-011**: System MUST use PostgreSQL window functions to calculate cumulative holdings efficiently (single query, no N+1 pattern).
 - **FR-012**: System MUST handle portfolios with zero transactions by returning empty chart data with appropriate messaging.
 - **FR-013**: System MUST namespace Redis cache keys to prevent collisions between different portfolios and users.
-- **FR-014**: System MUST support gradual rollout via feature flag to enable A/B comparison with old approach.
-- **FR-015**: System MUST preserve the portfolio_snapshots table during migration phase (30 days) as a backup and comparison baseline.
+- **FR-014**: System MUST remove the portfolio_snapshots table immediately as there are no active users and no risk of data loss.
+- **FR-015**: System MUST remove the backfill-historical-snapshots.ts script as it will no longer be needed.
 
 ### Non-Functional / Quality Requirements
 - **NFR-001**: Cold cache chart load (first request) MUST complete within 500ms at p95 latency (maintains existing NFR-009).
@@ -91,7 +91,7 @@ As a portfolio owner who adds back-dated transactions, I need my portfolio chart
 - **NFR-007**: Cache invalidation MUST be atomic - either all interval keys are cleared or none (prevent partial state).
 - **NFR-008**: Database function MUST use indexed queries on portfolio_id, transaction_date, and price_date columns for optimal performance.
 - **NFR-009**: System MUST NOT consume computational resources for inactive portfolios (no background jobs, no scheduled snapshots).
-- **NFR-010**: Migration MUST be zero-downtime with feature flag rollback capability if issues are detected.
+- **NFR-010**: Migration MUST be clean cutover - remove old table and script immediately as there are no active users to impact.
 - **NFR-011**: Redis storage per portfolio MUST NOT exceed 30KB (5 intervals × 6KB average per interval).
 - **NFR-012**: Concurrent requests for the same portfolio chart MUST NOT trigger duplicate calculations (cache stampede prevention).
 
@@ -107,10 +107,11 @@ As a portfolio owner who adds back-dated transactions, I need my portfolio chart
   - Joins: transactions + price_cache tables
 
 ### Migration Strategy
-- **Phase 1 (Day 1-2)**: Implement database function, add Redis integration, update chart API with feature flag
-- **Phase 2 (Day 3-4)**: Deploy to 10% of users, monitor performance metrics (latency, cache hit rate)
-- **Phase 3 (Day 5-7)**: Gradual rollout to 50%, then 100% based on metrics validation
-- **Phase 4 (Day 30+)**: Deprecate portfolio_snapshots table, remove backfill script, remove feature flag
+- **Phase 1 (Day 1)**: Drop portfolio_snapshots table, remove backfill script
+- **Phase 2 (Day 1-2)**: Implement PostgreSQL database function with window functions
+- **Phase 3 (Day 2-3)**: Add Redis integration (Vercel KV), update chart API
+- **Phase 4 (Day 3-4)**: Deploy to production, monitor performance metrics (latency, cache hit rate)
+- **Phase 5 (Day 4-5)**: Validate all chart intervals working correctly, remove feature flags if used
 
 ### Success Metrics
 - Cold cache p95 latency ≤ 500ms
