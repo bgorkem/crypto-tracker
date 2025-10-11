@@ -211,61 +211,61 @@
 
 ## Phase 5: Integration & Performance Tests (Day 3-4)
 
-### T026 [P]: Integration test cache hit on second request
+### T026 [P]: Integration test cache hit on second request ✅
 **Files**: `__tests__/integration/chart-caching.test.ts`
 **Description**: Test scenario: 1) First request returns cached=false, 2) Second request returns cached=true with identical data. Validates Redis caching works end-to-end (Acceptance Scenario 2)
 **Dependencies**: T021
 **Validation**: Test written and passes
 
-### T027 [P]: Integration test cache invalidation on transaction add
+### T027 [P]: Integration test cache invalidation on transaction add ✅
 **Files**: `__tests__/integration/chart-caching.test.ts`
 **Description**: Test scenario: 1) Request chart (populates cache), 2) Add transaction, 3) Next request returns cached=false with updated data. Validates mutation-based invalidation (Acceptance Scenario 3)
 **Dependencies**: T022
 **Validation**: Test written and passes
 
-### T028 [P]: Integration test cache invalidation on transaction edit
+### T028 [P]: Integration test cache invalidation on transaction edit ✅
 **Files**: `__tests__/integration/chart-caching.test.ts`
 **Description**: Test scenario: Edit transaction quantity, verify chart shows updated values and cached=false (Acceptance Scenario 4)
 **Dependencies**: T023
 **Validation**: Test written and passes
 
-### T029 [P]: Integration test cache invalidation on transaction delete
+### T029 [P]: Integration test cache invalidation on transaction delete ✅
 **Files**: `__tests__/integration/chart-caching.test.ts`
 **Description**: Test scenario: Delete transaction, verify chart excludes deleted transaction data (Acceptance Scenario 5)
 **Dependencies**: T024
 **Validation**: Test written and passes
 
-### T030 [P]: Integration test 1-year cap for 'all' interval
+### T030 [P]: Integration test 1-year cap for 'all' interval ✅
 **Files**: `__tests__/integration/chart-caching.test.ts`
 **Description**: Test scenario: Create transaction from 3 years ago, request 'all' interval, verify snapshots ≤366 and oldest snapshot ≥ 1 year ago. Validates performance protection
 **Dependencies**: T021
 **Validation**: Test written and passes
 
-### T031 [P]: Integration test empty portfolio edge case
+### T031 [P]: Integration test empty portfolio edge case ✅
 **Files**: `__tests__/integration/chart-caching.test.ts`
 **Description**: Test scenario: Portfolio with zero transactions returns empty chart data with appropriate messaging (Acceptance Scenario - Edge Cases)
 **Dependencies**: T021
 **Validation**: Test written and passes
 
-### T032 [P]: Performance test cold cache latency
+### T032 [P]: Performance test cold cache latency ✅
 **Files**: `__tests__/performance/chart-performance.test.ts`
 **Description**: Test portfolio with 1000 transactions requesting 'all' interval completes in <500ms. Validates NFR-001 (cold cache p95 ≤500ms)
 **Dependencies**: T021
 **Validation**: Test written and passes, latency within target
 
-### T033 [P]: Performance test warm cache latency
+### T033 [P]: Performance test warm cache latency ✅
 **Files**: `__tests__/performance/chart-performance.test.ts`
 **Description**: Test cached chart request completes in <50ms. Validates NFR-002 (warm cache p95 ≤50ms)
 **Dependencies**: T021
 **Validation**: Test written and passes, latency within target
 
-### T034 [P]: Performance test cache invalidation latency
+### T034 [P]: Performance test cache invalidation latency ✅
 **Files**: `__tests__/performance/chart-performance.test.ts`
 **Description**: Test CacheService.invalidatePortfolio completes in <50ms. Validates NFR-003 (invalidation ≤50ms)
 **Dependencies**: T010
 **Validation**: Test written and passes, latency within target
 
-### T035 [P]: Performance test database function execution
+### T035 [P]: Performance test database function execution ✅
 **Files**: `__tests__/performance/chart-performance.test.ts`
 **Description**: Test calculate_portfolio_snapshots with 1000 transactions over 365 days completes in <300ms. Validates NFR-004
 **Dependencies**: T004
@@ -275,13 +275,13 @@
 
 ## Phase 6: Deployment & Monitoring (Day 4-5)
 
-### T036: Deploy migrations to production
+### T036: Deploy migrations to production ✅
 **Files**: `supabase/migrations/`
 **Description**: Run npx supabase db push to apply migrations: drop portfolio_snapshots table, add calculate_portfolio_snapshots function
 **Dependencies**: T001, T004
 **Validation**: Migrations applied successfully, no errors in Supabase dashboard
 
-### T037: Verify Vercel KV linked to production
+### T037: Verify Vercel KV linked to production ✅
 **Files**: Vercel Dashboard (manual verification)
 **Description**: Confirm Vercel KV environment variables are injected into production deployment, test Redis connectivity
 **Dependencies**: T008
@@ -458,10 +458,10 @@ Task: "Performance test database function execution in __tests__/performance/cha
 *Updated as tasks are completed*
 
 **Total Tasks**: 40  
-**Completed**: 0  
+**Completed**: 37  
 **In Progress**: 0  
 **Blocked**: 0  
-**Ready**: 3 (T001, T002, T003)  
+**Ready**: 3 (T038, T039, T040)  
 
 **Estimated Duration**: 5 days  
 **Critical Path**: T001 → T004 → T010 → T021 → T036 → T040
