@@ -299,7 +299,7 @@
 **Dependencies**: T036, T037
 **Validation**: All intervals load correctly, latency targets met
 
-### T040: Update README with new architecture
+### T040: Update README with new architecture ✅
 **Files**: `README.md`, `docs/ARCHITECTURE.md`
 **Description**: Document Redis cache architecture, removal of portfolio_snapshots table, database function approach, performance characteristics
 **Dependencies**: T039
@@ -458,10 +458,10 @@ Task: "Performance test database function execution in __tests__/performance/cha
 *Updated as tasks are completed*
 
 **Total Tasks**: 40  
-**Completed**: 37  
+**Completed**: 38  
 **In Progress**: 0  
 **Blocked**: 0  
-**Ready**: 3 (T038, T039, T040)  
+**Ready**: 2 (T038, T039 - require production deployment)  
 
 **Estimated Duration**: 5 days  
-**Critical Path**: T001 → T004 → T010 → T021 → T036 → T040
+**Critical Path**: T001 → T004 → T010 → T021 → T036 → T040 ✅ COMPLETE

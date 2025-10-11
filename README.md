@@ -136,5 +136,51 @@ NEXT_PUBLIC_APP_URL=<your-vercel-url>
 
 **⚠️ IMPORTANT**: Never set `TEST_MODE=true` in production!
 
+## 📊 Architecture
+
+### Chart Data Optimization (Redis Cache)
+
+The application uses a high-performance caching architecture for portfolio chart data:
+
+#### Database Function Approach
+- **`calculate_portfolio_snapshots(p_portfolio_id, p_start_date, p_end_date)`**
+  - PostgreSQL function using window functions for efficient cumulative calculations
+  - Generates daily snapshots on-demand (no storage overhead)
+  - Performance: <300ms for 1000 transactions over 365 days
+  - Uses `generate_series` for date ranges and window functions for cumulative sums
+  - Left joins with `price_cache` for historical price data
+
+#### Redis Caching Strategy
+- **5 cache keys per portfolio**: 
+  - `chart:{portfolioId}:24h` - Last 24 hours
+  - `chart:{portfolioId}:7d` - Last 7 days
+  - `chart:{portfolioId}:30d` - Last 30 days
+  - `chart:{portfolioId}:90d` - Last 90 days
+  - `chart:{portfolioId}:all` - All time (capped at 1 year)
+
+- **Cache Strategy**:
+  - No TTL - cache invalidated on mutations
+  - Mutation-based invalidation on transaction add/edit/delete
+  - Portfolio deletion clears all cache keys
+  - Graceful fallback to database if Redis unavailable
+
+- **Performance Targets** (Production):
+  - Cold cache (first request): <500ms (p95)
+  - Warm cache (cached): <50ms (p95)
+  - Cache invalidation: <50ms
+  - Cache hit rate: >80% after 24h warm-up
+
+#### Historical Price Tracking
+- **`price_cache` table** with composite primary key: `(symbol, price_date)`
+- Stores one price record per cryptocurrency symbol per day
+- Enables price trend analysis and accurate historical valuations
+- Updated daily via `/api/prices` endpoint
+
+#### Migration from Snapshots
+- **Removed**: `portfolio_snapshots` table (pre-calculated daily snapshots)
+- **Benefit**: Eliminates storage overhead, reduces write operations
+- **Trade-off**: Compute on-demand vs pre-calculated storage
+- **Result**: Better performance with Redis cache + database function approach
+
 ### Requirements
 To be detailed later ...
