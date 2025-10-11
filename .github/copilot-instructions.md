@@ -1,24 +1,58 @@
 # crypto-tracker Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2025-10-04
+Auto-generated from all feature plans. Last updated: 2025-01-11
 
 ## Active Technologies
-- TypeScript 5.x (Next.js 15.5 with React 19) + Next.js 15.5, React 19, Supabase (PostgreSQL + Auth), Tailwind 4, ShadCN UI, Moralis API (crypto prices), Recharts/TradingView (charting) (001-MVP-features)
+- TypeScript 5.x (Next.js 15.5 with React 19) + Next.js 15.5, React 19, Supabase (PostgreSQL + Auth), Redis Cloud (caching), Tailwind 4, ShadCN UI, Moralis API (crypto prices), Recharts/TradingView (charting)
+
+## Active Features
+- **001-MVP-features**: Core portfolio tracking (complete)
+- **002-redis-snapshot-optimization**: Redis caching for portfolio charts (merged to main)
 
 ## Project Structure
 ```
-src/
-tests/
+app/                    # Next.js App Router (pages + API routes)
+components/             # React components (UI + feature components)
+lib/                    # Business logic, utilities, API clients
+__tests__/              # Test files (unit, integration, E2E)
+supabase/migrations/    # Database schema migrations
+specs/                  # Feature specifications (Spec Kit format)
+docs/                   # Architecture & session documentation
 ```
 
 ## Commands
-npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] npm run lint
+```bash
+npm run dev             # Start development server (port 3000)
+npm test                # Run unit tests (Vitest)
+npm run test:e2e        # Run E2E tests (Playwright)
+npm run lint            # Run ESLint
+npm run build           # Build for production
+```
 
 ## Code Style
-TypeScript 5.x (Next.js 15.5 with React 19): Follow standard conventions
+- TypeScript 5.x: Follow standard conventions
+- React 19: Use Server Components by default, Client Components with `'use client'`
+- API Routes: Use standardized error handling via `lib/api-response.ts`
+
+## Architecture Notes
+
+**Chart Data Optimization** (Feature 002):
+- Portfolio snapshots calculated on-demand via database function `calculate_portfolio_snapshots()`
+- Redis cache layer (5-minute TTL) for chart data
+- **No Supabase Edge Functions**: Daily snapshot generation removed (obsolete)
+- Cache invalidation on transaction changes
+- Target: <50ms cached, <500ms uncached, ≥80% cache hit rate
+
+**Database**:
+- Supabase PostgreSQL 15
+- Composite primary key on `price_cache` table: `(symbol, price_date)`
+- Historical price tracking via CoinGecko API
 
 ## Recent Changes
-- 001-MVP-features: Added TypeScript 5.x (Next.js 15.5 with React 19) + Next.js 15.5, React 19, Supabase (PostgreSQL + Auth), Tailwind 4, ShadCN UI, Moralis API (crypto prices), Recharts/TradingView (charting)
+- 001-MVP-features: Core portfolio tracking complete (108/108 tasks)
+- 002-redis-snapshot-optimization: Redis caching merged to main (38/40 tasks - 95%)
+- **REMOVED**: Supabase Edge Functions (`supabase/functions/daily-snapshot/`) - replaced by Redis caching
+
 
 <!-- MANUAL ADDITIONS START -->
 ## Development Workflow

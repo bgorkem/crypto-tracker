@@ -1091,32 +1091,10 @@ export async function createSnapshot(portfolioId: string, totalValue: number) {
 
 ---
 
-#### T074 [P] Create Supabase Edge Function for daily snapshots
-**Path**: `supabase/functions/daily-snapshot/index.ts`  
-**Action**: Cron job to capture portfolio values daily at midnight UTC
-```typescript
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-serve(async (req) => {
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  );
-  
-  // Get all portfolios
-  const { data: portfolios } = await supabase.from('portfolios').select('id');
-  
-  // For each portfolio, calculate current value and create snapshot
-  for (const portfolio of portfolios || []) {
-    // Calculate total value logic here
-    // Insert snapshot
-  }
-  
-  return new Response(JSON.stringify({ success: true }), { status: 200 });
-});
-```
-**Verify**: Edge function deployed, cron scheduled
+#### T074 [P] ~~Create Supabase Edge Function for daily snapshots~~ [OBSOLETE]
+**Status**: ⚠️ **DEPRECATED** - Replaced by Redis caching in Feature 002  
+**Reason**: Feature 002 introduced on-demand snapshot calculation via database function `calculate_portfolio_snapshots()` with Redis caching. Daily pre-calculated snapshots are no longer needed.  
+**Migration Path**: Use `/api/portfolios/[id]/chart` endpoint which handles caching automatically.
 
 ---
 
@@ -1715,45 +1693,19 @@ function mapSymbolToCoinGeckoId(symbol: string): string | null
 
 ---
 
-### T105 Create Supabase Edge Function for daily snapshot generation
-**Path**: `supabase/functions/daily-snapshot/index.ts`  
-**Action**: Edge Function to run daily at midnight UTC and generate portfolio snapshots  
-**Requirements**:
-- Trigger: Scheduled daily at 00:00 UTC
-- Fetch yesterday's cryptocurrency prices (7 symbols)
-- Store in `price_cache` with `price_date = yesterday`
-- For each portfolio: calculate value using yesterday's prices
-- Insert snapshot into `portfolio_snapshots` table
-- Handle failures gracefully (retry logic)
-**Edge Function Code**:
-```typescript
-Deno.serve(async (req) => {
-  const yesterday = new Date()
-  yesterday.setDate(yesterday.getDate() - 1)
-  yesterday.setHours(0, 0, 0, 0)
+### T105 ~~Create Supabase Edge Function for daily snapshot generation~~ [OBSOLETE]
+**Status**: ⚠️ **DEPRECATED** - Replaced by Redis caching in Feature 002  
+**Reason**: Feature 002 (Redis Snapshot Optimization) eliminated the need for pre-calculated daily snapshots. Portfolio values are now calculated on-demand using the database function `calculate_portfolio_snapshots()` with Redis caching for performance.  
 
-  // 1. Fetch prices for yesterday from Moralis/CoinGecko
-  const prices = await fetchHistoricalPrices(SUPPORTED_SYMBOLS, yesterday)
-  
-  // 2. Store in price_cache
-  await storePrices(prices)
-  
-  // 3. Generate snapshots for all portfolios
-  const portfolios = await getAllPortfolios()
-  for (const portfolio of portfolios) {
-    const value = await calculateHistoricalValue(portfolio.id, yesterday)
-    await createSnapshot(portfolio.id, yesterday, value)
-  }
-  
-  return new Response(JSON.stringify({ success: true }), {
-    headers: { 'Content-Type': 'application/json' }
-  })
-})
-```
-**Verify**:
-- Manually trigger function and check snapshots created
-- Scheduled trigger works (test with cron)
-- Handles edge cases (portfolios created today, etc.)
+**What Changed**:
+- ❌ Removed: Daily cron job at midnight UTC
+- ❌ Removed: `portfolio_snapshots` table (dropped in migration `20251010000001_drop_portfolio_snapshots.sql`)
+- ✅ Added: `calculate_portfolio_snapshots()` database function (real-time calculations)
+- ✅ Added: Redis cache layer (5-minute TTL, <50ms response time)
+
+**Migration Path**: Use `/api/portfolios/[id]/chart` endpoint - it handles everything automatically with cache invalidation on transaction changes.
+
+**See**: `docs/EDGE-FUNCTION-REMOVAL.md` for complete migration details.
 
 ---
 

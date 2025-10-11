@@ -153,7 +153,7 @@
 
 ### Snapshot Generation & Backfill ✅
 - ✅ T104 Create backfill script for existing portfolios *(commit: f115aff)*
-- ✅ T105 Create Supabase Edge Function for daily snapshots *(commit: d2b60f1)*
+- ⚠️ T105 ~~Create Supabase Edge Function for daily snapshots~~ *(OBSOLETE: Replaced by Redis caching in Feature 002)*
 
 ### Chart Integration ✅
 - ✅ T106 Update chart API to use historical prices (remove synthetic data) *(commit: d5c6163)*
@@ -166,7 +166,7 @@
 - ✅ Historical prices API endpoint live (cache-first strategy)
 - ✅ calculateHistoricalValue() function (8 unit tests passing)
 - ✅ Backfill script with CLI options (idempotent, skips existing)
-- ✅ Daily snapshot Edge Function (scheduled via pg_cron)
+- ⚠️ ~~Daily snapshot Edge Function~~ (OBSOLETE: Replaced by Redis caching in Feature 002)
 - ✅ Chart API returns real snapshot data (no synthetic)
 - ✅ Integration tests cover end-to-end workflow (7 scenarios)
 - ✅ Comprehensive documentation (troubleshooting, cost analysis, maintenance)
