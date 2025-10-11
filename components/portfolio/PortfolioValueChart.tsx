@@ -10,17 +10,21 @@ import { Skeleton } from '@/components/ui/skeleton';
 type Interval = '24h' | '7d' | '30d' | '90d' | 'all';
 
 interface ChartSnapshot {
-  captured_at: string;
-  total_value: number;
+  snapshot_date: string;
+  total_value: string;
+  total_cost: string;
+  total_pl: string;
+  total_pl_pct: string;
+  holdings_count: number;
 }
 
 interface ChartData {
   interval: Interval;
   snapshots: ChartSnapshot[];
-  current_value: number;
-  start_value: number;
-  change_abs: number;
-  change_pct: number;
+  current_value: string;
+  start_value: string;
+  change_abs: string;
+  change_pct: string;
 }
 
 interface PortfolioValueChartProps {
@@ -37,19 +41,21 @@ const INTERVAL_LABELS: Record<Interval, string> = {
 };
 
 // Format currency
-const formatCurrency = (value: number) => {
+const formatCurrency = (value: number | string) => {
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(value);
+  }).format(numValue);
 };
 
 // Format percentage
-const formatPercentage = (value: number) => {
-  const sign = value >= 0 ? '+' : '';
-  return `${sign}${value.toFixed(2)}%`;
+const formatPercentage = (value: number | string) => {
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  const sign = numValue >= 0 ? '+' : '';
+  return `${sign}${numValue.toFixed(2)}%`;
 };
 
 // Custom tooltip component
@@ -199,9 +205,9 @@ export function PortfolioValueChart({ portfolioId, accessToken }: PortfolioValue
 
   // Format data for Recharts
   const chartData = data?.snapshots.map((snapshot) => ({
-    date: new Date(snapshot.captured_at).toLocaleDateString(),
-    value: snapshot.total_value,
-    timestamp: snapshot.captured_at,
+    date: new Date(snapshot.snapshot_date).toLocaleDateString(),
+    value: parseFloat(snapshot.total_value),
+    timestamp: snapshot.snapshot_date,
   })) || [];
 
   return (
@@ -218,7 +224,7 @@ export function PortfolioValueChart({ portfolioId, accessToken }: PortfolioValue
                   </span>
                   <span
                     className={`text-sm font-medium ${
-                      data.change_pct >= 0 ? 'text-green-600' : 'text-red-600'
+                      parseFloat(data.change_pct) >= 0 ? 'text-green-600' : 'text-red-600'
                     }`}
                   >
                     {formatPercentage(data.change_pct)}

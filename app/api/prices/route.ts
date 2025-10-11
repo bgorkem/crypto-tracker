@@ -45,19 +45,30 @@ export async function GET(request: NextRequest) {
 
     // Update price cache in database using admin client
     if (prices.length > 0) {
-      await adminClient
+      // Get current date in UTC for price_date
+      const priceDate = new Date().toISOString().split('T')[0];
+      
+      const { error: upsertError } = await adminClient
         .from('price_cache')
         .upsert(
           prices.map(p => ({
             symbol: p.symbol,
+            price_date: priceDate,
             price_usd: p.price_usd,
             market_cap: p.market_cap,
             volume_24h: p.volume_24h,
             change_24h_pct: p.change_24h_pct,
             last_updated: p.last_updated,
           })),
-          { onConflict: 'symbol' }
+          { 
+            onConflict: 'symbol,price_date',
+            ignoreDuplicates: false 
+          }
         );
+
+      if (upsertError) {
+        console.error('Error updating price cache:', upsertError);
+      }
     }
 
     return NextResponse.json(
