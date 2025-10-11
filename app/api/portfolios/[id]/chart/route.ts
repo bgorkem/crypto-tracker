@@ -371,6 +371,52 @@ export async function GET(
       a.snapshot_date.localeCompare(b.snapshot_date)
     );
 
+    // 6.5. Replace today's data point with current value (live prices)
+    // The DB function may return today's snapshot with $0 if no snapshot exists yet
+    // We want to show live portfolio value for today instead
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const todayIndex = sortedSnapshots.findIndex(s => s.snapshot_date === today);
+    
+    if (todayIndex !== -1 || parseFloat(currentValue) > 0) {
+      // Calculate today's cost basis from holdings
+      const { data: transactions } = await supabase
+        .from('transactions')
+        .select('symbol, type, quantity, price_per_unit, transaction_date')
+        .eq('portfolio_id', portfolioId)
+        .order('transaction_date', { ascending: true });
+
+      const holdingsMap = calculateHoldings((transactions as Transaction[]) || []);
+      let totalCost = 0;
+      
+      holdingsMap.forEach((data: HoldingData) => {
+        if (data.total_quantity > 0) {
+          totalCost += data.total_cost;
+        }
+      });
+
+      const todayValue = parseFloat(currentValue);
+      const todayPL = todayValue - totalCost;
+      const todayPLPct = totalCost > 0 ? ((todayPL / totalCost) * 100) : 0;
+      const holdingsCount = Array.from(holdingsMap.values()).filter(h => h.total_quantity > 0).length;
+
+      const todaySnapshot = {
+        snapshot_date: today,
+        total_value: currentValue,
+        total_cost: totalCost.toFixed(2),
+        total_pl: todayPL.toFixed(2),
+        total_pl_pct: todayPLPct.toFixed(2),
+        holdings_count: holdingsCount,
+      };
+
+      if (todayIndex !== -1) {
+        // Replace existing today snapshot
+        sortedSnapshots[todayIndex] = todaySnapshot;
+      } else {
+        // Add today snapshot
+        sortedSnapshots.push(todaySnapshot);
+      }
+    }
+
     // 7. Build ChartData response
     // Start value should be the OLDEST snapshot's total_value
     const startValue = sortedSnapshots.length > 0 
